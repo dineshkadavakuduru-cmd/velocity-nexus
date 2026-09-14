@@ -1,8 +1,7 @@
 ﻿"use client";
 
-import { memo, useMemo } from "react";
-import { motion } from "motion/react";
-import { tsParticles } from "@tsparticles/engine";
+import { memo, useEffect, useRef } from "react";
+import { COLORS } from "@/lib/constants";
 
 export interface SparklesBackgroundProps {
   children?: React.ReactNode;
@@ -12,56 +11,94 @@ export interface SparklesBackgroundProps {
   particleCount?: number;
 }
 
+type Particle = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  phase: number;
+  delta: number;
+};
+
 export const SparklesBackground = memo(({
   children,
   className = "",
   density = 1,
-  color = "#00f0ff",
+  color = COLORS.primary,
   particleCount = 100,
 }: SparklesBackgroundProps) => {
-  const sparkleIds = useMemo(() => {
-    return Array.from({ length: particleCount * density }, (_, i) => i);
-  }, [particleCount, density]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
+  const particlesRef = useRef<Particle[]>([]);
 
-  const sparkles = sparkleIds.map((id) => {
-    const size = Math.random() * 4 + 1;
-    const style: React.CSSProperties = {
-      position: "absolute",
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: `${size}px`,
-      height: `${size}px`,
-      backgroundColor: color,
-      borderRadius: "50%",
-      opacity: Math.random() * 0.5 + 0.3,
-      filter: `blur(${Math.random() * 2}px)`,
-      animation: `twinkle-${id} ${Math.random() * 3 + 2}s infinite ease-in-out`,
-      animationDelay: `-${Math.random() * 3}s`,
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    return (
-      <div key={id} className="sparkle" style={style} />
-    );
-  });
+    resize();
+    window.addEventListener("resize", resize);
+
+    const count = Math.round(particleCount * density);
+    particlesRef.current = Array.from({ length: count }, () => ({
+      x: Math.random() * canvas.offsetWidth,
+      y: Math.random() * canvas.offsetHeight,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: Math.random() * 3 + 1,
+      phase: Math.random() * Math.PI * 2,
+      delta: Math.random() * 0.02 + 0.005,
+    }));
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particlesRef.current.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > canvas.offsetWidth) p.vx = -p.vx;
+        if (p.y < 0 || p.y > canvas.offsetHeight) p.vy = -p.vy;
+
+        p.phase += p.delta;
+        const alpha = Math.abs(Math.sin(p.phase)) * 0.6 + 0.2;
+
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.globalAlpha = 1;
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", resize);
+    };
+  }, [particleCount, density, color]);
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(circle at 50% 50%, ${color}05 0%, transparent 70%)`,
-        }}
+    <div className={`absolute inset-0 overflow-hidden ${className}`}>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full pointer-events-none"
+        aria-hidden="true"
       />
-      <style jsx>{`
-        .sparkle {
-          box-shadow: 0 0 ${Math.random() * 10 + 5}px currentColor;
-        }
-        @keyframes twinkle-${0} {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.5); }
-        }
-      `}</style>
-      {sparkles}
       {children}
     </div>
   );
@@ -69,5 +106,3 @@ export const SparklesBackground = memo(({
 
 SparklesBackground.displayName = "SparklesBackground";
 export default SparklesBackground;
-
-

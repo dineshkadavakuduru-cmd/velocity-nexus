@@ -1,23 +1,6 @@
-﻿"use client";
-
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-import {
-  AnimatedGradientText,
-  MagneticButton,
-  NeonText,
-  SparklesBackground,
-  TypewriterEffect,
-  GlassmorphicPanel,
-} from "@/components/ui";
+﻿import { SparklesBackground } from "@/components/ui";
+import CarShowcaseLoader from "./CarShowcaseLoader";
 import { COLORS } from "@/lib/constants";
-
-const DynamicCarShowcase = dynamic(() => import("./CarShowcase"), {
-  ssr: false,
-  loading: () => <div className="w-full h-[500px] flex items-center justify-center text-secondary">Loading showcase...</div>,
-});
 
 const features = [
   { title: "EXOTIC SUPERCARS", description: "6 handcrafted exotic cars with authentic performance specs" },
@@ -29,19 +12,6 @@ const features = [
 ];
 
 const HeroSection = () => {
-  const router = useRouter();
-  const [showFeatures, setShowFeatures] = useState(false);
-  const [loaded3D, setLoaded3D] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowFeatures(true), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleNavigate = useCallback((path: string) => {
-    router.push(path);
-  }, [router]);
-
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       <SparklesBackground
@@ -53,162 +23,84 @@ const HeroSection = () => {
 
       <div className="relative z-10 flex min-h-screen flex-col items-center">
         <header className="w-full py-8 px-6 flex justify-between items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <NeonText color={COLORS.primary} glowIntensity="high" className="text-3xl sm:text-4xl">
-              VELOCITY NEXUS
-            </NeonText>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="flex gap-4"
-          >
-            <MagneticButton
-              onClick={() => handleNavigate("/garage")}
-              variant="primary"
-              size="md"
-            >
-              GARAGE
-            </MagneticButton>
-            <MagneticButton
-              onClick={() => handleNavigate("/tracks")}
-              variant="secondary"
-              size="md"
-            >
-              TRACKS
-            </MagneticButton>
-          </motion.div>
+          <p className="text-3xl sm:text-4xl font-display font-black neon-text">
+            VELOCITY NEXUS
+          </p>
+          <nav aria-label="Main navigation">
+            <ul className="flex items-center gap-4 font-display text-sm font-bold tracking-widest">
+              <li>
+                <a href="/garage" className="nav-link">GARAGE</a>
+              </li>
+              <li>
+                <a href="/tracks" className="nav-link">TRACKS</a>
+              </li>
+              <li>
+                <a href="/lobby" className="nav-link">MULTIPLAYER</a>
+              </li>
+            </ul>
+          </nav>
         </header>
 
         <main className="relative z-10 flex flex-col items-center flex-1 w-full">
-          <motion.div
-            className="relative w-full max-w-4xl mx-auto text-center py-16 sm:py-24"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-          >
-            <AnimatePresence>
-              <motion.h1
-                key="title"
-                className="mb-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-black tracking-tight"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -30 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              >
-                <AnimatedGradientText
-                  gradientColors={[COLORS.primary, COLORS.secondary, COLORS.accent, COLORS.primary]}
-                  animate={true}
-                >
-                  RACING
-                </AnimatedGradientText>
-              </motion.h1>
+          <div className="relative w-full max-w-4xl mx-auto text-center py-16 sm:py-24 px-6">
+            <h1 className="mb-4 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight neon-text">
+              RACING
+            </h1>
 
-              <motion.div
-                className="mt-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1 }}
-              >
-                <TypewriterEffect
-                  words={["FULL-STACK 3D MULTIPLAYER EXPERIENCE", "BROWSER-BASED SUPERCAR RACING", "CINEMATIC VISUALS IN YOUR BROWSER"]}
-                  className="text-xl sm:text-2xl text-secondary"
-                  typingSpeed={80}
-                  deleteSpeed={40}
-                  delayBetweenWords={3000}
-                  loop={true}
-                />
-              </motion.div>
-            </AnimatePresence>
+            <p className="text-lg sm:text-xl text-secondary max-w-2xl mx-auto mb-8">
+              Browser-based 3D supercar racing with real-time multiplayer, cinematic
+              visuals, and spatial audio.
+            </p>
 
-            <motion.div
-              className="mt-12 flex flex-col sm:flex-row justify-center gap-4"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.2 }}
+            <a
+              href="/race?mode=single"
+              className="hero-cta inline-flex items-center justify-center px-8 py-4 text-xl tracking-widest"
             >
-              <MagneticButton
-                onClick={() => handleNavigate("/race?mode=single")}
-                variant="primary"
-                size="lg"
-                className="font-display text-xl tracking-widest"
-              >
-                <span className="flex items-center gap-2">
-                  SINGLE RACE
-                </span>
-              </MagneticButton>
+              PLAY NOW
+            </a>
+          </div>
 
-              <MagneticButton
-                onClick={() => handleNavigate("/lobby")}
-                variant="secondary"
-                size="lg"
-                className="font-display text-xl tracking-widest"
-              >
-                <span className="flex items-center gap-2">
-                  MULTIPLAYER
-                </span>
-              </MagneticButton>
-            </motion.div>
-          </motion.div>
-
-          <motion.div
-            className="relative w-full max-w-6xl mx-auto py-8"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 1.5 }}
-          >
-            <DynamicCarShowcase loaded={loaded3D} />
-          </motion.div>
+          <div className="relative w-full max-w-6xl mx-auto py-8 px-6">
+            <CarShowcaseLoader />
+          </div>
         </main>
 
-        <motion.div
-          className="relative z-10 w-full py-16"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showFeatures ? 1 : 0 }}
-          transition={{ duration: 0.8 }}
-        >
+        <section className="relative z-10 w-full py-16">
           <div className="max-w-6xl mx-auto px-6">
-            <motion.h2
-              className="text-center text-3xl font-display font-bold mb-12"
-              style={{ color: COLORS.textPrimary }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={showFeatures ? { opacity: 1, y: 0 } : {}}
-            >
-              <NeonText color={COLORS.primary} glowIntensity="medium">
-                FEATURES
-              </NeonText>
-            </motion.h2>
+            <h2 className="text-center text-3xl font-display font-bold mb-12 neon-text-pink">
+              FEATURES
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, i) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={showFeatures ? { opacity: 1, y: 0 } : {}}
-                  transition={{ delay: 0.3 + i * 0.1, duration: 0.6 }}
-                >
-                  <GlassmorphicPanel hover className="h-full">
-                    <h3 className="text-xl font-display font-bold mb-2" style={{ color: COLORS.primary }}>
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm text-secondary">{feature.description}</p>
-                  </GlassmorphicPanel>
-                </motion.div>
+              {features.map((feature) => (
+                <div key={feature.title} className="feature-card">
+                  <h3 className="text-xl font-display font-bold mb-2" style={{ color: COLORS.primary }}>
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-secondary">{feature.description}</p>
+                </div>
               ))}
             </div>
           </div>
-        </motion.div>
+        </section>
+
+        <noscript className="relative z-10 w-full py-8">
+          <div className="max-w-2xl mx-auto px-6 text-center">
+            <div className="inline-block rounded-xl bg-input border border-accent px-6 py-4">
+              <p className="text-sm font-display font-bold text-accent mb-2">
+                JavaScript IS REQUIRED
+              </p>
+              <p className="text-secondary">
+                The full 3D racing experience uses WebGL and real-time networking.
+                Navigation links above still work without JavaScript, but to play,
+                please enable JavaScript in your browser.
+              </p>
+            </div>
+          </div>
+        </noscript>
       </div>
     </div>
   );
 };
 
 export default HeroSection;
-
-

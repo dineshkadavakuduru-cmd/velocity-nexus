@@ -1,13 +1,7 @@
-﻿"use client";
-
-import HeroSection from "@/components/screens/HeroSection";
+﻿import HeroSection from "@/components/screens/HeroSection";
 
 const Home = () => {
-  return (
-    <>
-      <HeroSection />
-    </>
-  );
+  return <HeroSection />;
 };
 
 export default Home;
