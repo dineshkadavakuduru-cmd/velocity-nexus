@@ -1,14 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import ShowcaseSkeleton from "./ShowcaseSkeleton";
 
 const DynamicCarShowcase = dynamic(() => import("./CarShowcase"), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-[500px] flex items-center justify-center text-secondary">
-      Loading showcase...
-    </div>
-  ),
+  loading: () => <ShowcaseSkeleton />,
 });
 
 interface CarShowcaseLoaderProps {

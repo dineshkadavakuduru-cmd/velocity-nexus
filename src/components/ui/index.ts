@@ -16,6 +16,7 @@ import { PositionIndicator } from "./PositionIndicator";
 import { LapCounter } from "./LapCounter";
 import { NitroBar } from "./NitroBar";
 import { DamageIndicator } from "./DamageIndicator";
+import { Skeleton } from "./Skeleton";
 
 export {
   SparklesBackground,
@@ -36,4 +37,5 @@ export {
   LapCounter,
   NitroBar,
   DamageIndicator,
+  Skeleton,
 };
