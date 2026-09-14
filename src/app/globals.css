@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #111111;
+  --card-foreground: #f0f0f0;
+  --primary: #00f0ff;
+  --primary-glow: #00f0ff40;
+  --secondary: #ff00ff80;
+  --accent: #ff00ff;
+  --accent-glow: #ff00ff40;
+  --border: #222222;
+  --input: #1a1a1a;
+  --ring: #00f0ff;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-accent-glow: var(--accent-glow);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-rajdhani, "Rajdhani"), system-ui, sans-serif;
+  --font-mono: var(--font-rajdhani, "Rajdhani"), system-ui, monospace;
+  --font-display: var(--font-orbitron, "Orbitron"), monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
+  .bg-gradient-conic {
+    background-image: conic-gradient(var(--tw-gradient-stops));
+  }
+  .glass {
+    background: rgba(17, 17, 17, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .glass-light {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .neon-text {
+    color: #00f0ff;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.7),
+                 0 0 20px rgba(0, 240, 255, 0.5),
+                 0 0 30px rgba(0, 240, 255, 0.3);
+  }
+  .neon-text-pink {
+    color: #ff00ff;
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7),
+                 0 0 20px rgba(255, 0, 255, 0.5),
+                 0 0 30px rgba(255, 0, 255, 0.3);
+  }
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5),
+                0 0 40px rgba(0, 240, 255, 0.3);
+  }
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5),
+                0 0 40px rgba(255, 0, 255, 0.3);
+  }
+  .glow-primary-hover {
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.7),
+                0 0 60px rgba(0, 240, 255, 0.4);
+  }
+  .border-glow {
+    border: 1px solid transparent;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.3);
+  }
+  .border-glow-pink {
+    border: 1px solid transparent;
+    box-shadow: 0 0 0 1px rgba(255, 0, 255, 0.3);
+  }
+}

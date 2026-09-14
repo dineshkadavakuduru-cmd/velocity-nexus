@@ -1,0 +1,47 @@
+{
+  "name": "velocity-nexus",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src/ && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "server:dev": "cd server && npx tsx watch src/index.ts",
+    "server:build": "cd server && npm run build",
+    "server:start": "cd server && npm start"
+  },
+  "dependencies": {
+    "@react-three/cannon": "^6.6.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
+    "@tsparticles/engine": "^4.4.0",
+    "@tsparticles/react": "^4.4.0",
+    "animejs": "^4.5.0",
+    "howler": "^2.2.4",
+    "motion": "^13.2.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "socket.io-client": "^4.8.3",
+    "three": "^0.186.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/animejs": "^3.1.13",
+    "@types/howler": "^2.2.13",
+    "@types/node": "^20.19.12",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.1",
+    "cors": "^2.8.6",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "socket.io": "^4.8.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}
