@@ -131,6 +131,7 @@ export const useCountdown = (onCountdownComplete?: () => void) => {
       } else if (countdown === 0) {
         const timer = setTimeout(() => {
           setRaceStatus("racing");
+          setCountdown(-1);
           onCountdownComplete?.();
         }, 1000);
         return () => clearTimeout(timer);

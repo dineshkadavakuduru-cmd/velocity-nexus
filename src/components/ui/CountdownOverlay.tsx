@@ -44,7 +44,7 @@ export const CountdownOverlay = memo(({
 
   return (
     <AnimatePresence>
-      {count !== null && (
+      {count !== null && count >= 0 && (
         <motion.div
           className={`
             fixed inset-0 z-[100]
