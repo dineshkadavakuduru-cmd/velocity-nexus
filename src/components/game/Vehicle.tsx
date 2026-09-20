@@ -122,21 +122,15 @@ export const Vehicle = ({
     }
 
     const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(ref.current.quaternion);
-    if (throttleInput > 0) {
-      const force: [number, number, number] = [
-        forwardDir.x * effectiveTorque * 20,
-        forwardDir.y * effectiveTorque * 20,
-        forwardDir.z * effectiveTorque * 20,
-      ];
-      api.applyForce(force, ref.current.position.toArray() as [number, number, number]);
-    }
+    const currentHorizontalVelocity = new THREE.Vector3(vx, 0, vz);
+    const targetSpeed = throttleInput * (carConfig.topSpeed / 3.6);
+    const desiredVelocity = forwardDir.clone().multiplyScalar(targetSpeed);
+    const response = throttleInput > 0 ? Math.min(1, delta * 5) : Math.min(1, delta * 3);
+    const controlledVelocity = currentHorizontalVelocity.lerp(desiredVelocity, response);
+    api.velocity.set(controlledVelocity.x, vy, controlledVelocity.z);
 
     if (brakeInput) {
-      const velocity = new THREE.Vector3(vx, vy, vz);
-      const brakeForce = velocity.length() > 0.01
-        ? velocity.normalize().multiplyScalar(-Math.min(1800, velocity.length() * 900)).toArray() as [number, number, number]
-        : [0, 0, 0] as [number, number, number];
-      api.applyForce(brakeForce, ref.current.position.toArray() as [number, number, number]);
+      api.velocity.set(controlledVelocity.x * 0.75, vy, controlledVelocity.z * 0.75);
     }
 
     if (handbrakeInput) {
@@ -158,12 +152,12 @@ export const Vehicle = ({
 
     if (nitroInput && nitroLevelRef.current > 0) {
       nitroLevelRef.current = Math.max(0, nitroLevelRef.current - delta * 20);
-      const force: [number, number, number] = [
-        forwardDir.x * carConfig.enginePower * 100,
-        forwardDir.y * carConfig.enginePower * 100,
-        forwardDir.z * carConfig.enginePower * 100,
-      ];
-      api.applyForce(force, ref.current.position.toArray() as [number, number, number]);
+      const nitroVelocity = forwardDir.clone().multiplyScalar(carConfig.nitro * 4);
+      api.velocity.set(
+        controlledVelocity.x + nitroVelocity.x * delta,
+        vy,
+        controlledVelocity.z + nitroVelocity.z * delta,
+      );
 
       if (Math.floor(nitroLevelRef.current / 5) > Math.floor((nitroLevelRef.current + delta * 20) / 5)) {
         const pos: [number, number, number] = [ref.current.position.x, ref.current.position.y - 0.5, ref.current.position.z - 2.2];
