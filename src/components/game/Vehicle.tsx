@@ -53,6 +53,27 @@ export const Vehicle = ({
 
   const [visibleGear, setVisibleGear] = useState(1);
   const velocityRef = useRef<[number, number, number]>([0, 0, 0]);
+  const directKeysRef = useRef<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!isLocal || typeof window === "undefined") return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+        event.preventDefault();
+      }
+      directKeysRef.current[event.code] = true;
+    };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      directKeysRef.current[event.code] = false;
+    };
+    window.addEventListener("keydown", handleKeyDown, { passive: false });
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", () => { directKeysRef.current = {}; });
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isLocal]);
 
   const [ref, api] = useCompoundBody(() => ({
     mass: carConfig.mass,
@@ -100,11 +121,17 @@ export const Vehicle = ({
       visibleGearRef.current = optimalGear;
     }
 
-    const steeringInput = controls.steering;
-    const throttleInput = controls.throttle;
-    const brakeInput = controls.brake;
-    const handbrakeInput = controls.handbrake;
-    const nitroInput = controls.nitro;
+    const keys = directKeysRef.current;
+    const directThrottle = keys.ArrowUp ? 1 : 0;
+    const directSteering = Number(Boolean(keys.ArrowLeft)) - Number(Boolean(keys.ArrowRight));
+    const directBrake = Boolean(keys.ArrowDown);
+    const directHandbrake = Boolean(keys.Space);
+    const directNitro = Boolean(keys.ShiftLeft || keys.ShiftRight);
+    const steeringInput = directSteering || controls.steering;
+    const throttleInput = Math.max(directThrottle, controls.throttle);
+    const brakeInput = directBrake || controls.brake;
+    const handbrakeInput = directHandbrake || controls.handbrake;
+    const nitroInput = directNitro || controls.nitro;
 
     const maxSteer = THREE.MathUtils.degToRad(35);
     const speedSensitiveSteer = maxSteer * (1 - Math.min(speedKmh / carConfig.topSpeed, 0.7));
