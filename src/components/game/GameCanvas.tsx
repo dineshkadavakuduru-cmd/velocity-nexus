@@ -107,7 +107,7 @@ const GameScene = ({
               networked={mode === "multiplayer"}
               objectRef={vehicleRef}
               position={[0, 1, 33]}
-              rotation={[0, Math.PI / 2, 0]}
+              rotation={[0, Math.PI, 0]}
             />
 
            {mode === "single" &&

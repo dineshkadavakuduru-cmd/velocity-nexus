@@ -129,6 +129,12 @@ export const Vehicle = ({
     const controlledVelocity = currentHorizontalVelocity.lerp(desiredVelocity, response);
     api.velocity.set(controlledVelocity.x, vy, controlledVelocity.z);
 
+    // Keep the arcade controller responsive even when Cannon puts the body to sleep.
+    // The track is intentionally forgiving, so direct horizontal integration is stable.
+    const nextPosition = ref.current.position.clone().addScaledVector(controlledVelocity, delta);
+    nextPosition.y = Math.max(1, nextPosition.y);
+    api.position.set(nextPosition.x, nextPosition.y, nextPosition.z);
+
     if (brakeInput) {
       api.velocity.set(controlledVelocity.x * 0.75, vy, controlledVelocity.z * 0.75);
     }
