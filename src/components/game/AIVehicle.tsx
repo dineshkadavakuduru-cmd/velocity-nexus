@@ -151,12 +151,16 @@ export const AIVehicle = ({
   return (
     <group ref={groupRef} position={initialPosition}>
       <mesh castShadow receiveShadow position={[0, -0.3, 0]}>
-        <boxGeometry args={[4, 1.5, 1.5]} />
-        <meshStandardMaterial color={carConfig.color} metalness={0.9} roughness={0.1} opacity={0.9} transparent />
+        <boxGeometry args={[3.8, 0.65, 1.75]} />
+        <meshStandardMaterial color={carConfig.color} metalness={0.72} roughness={0.22} />
       </mesh>
       <mesh castShadow position={[0, 0.9, 0]}>
-        <boxGeometry args={[1.5, 1, 1]} />
-        <meshStandardMaterial color={carConfig.color} metalness={0.9} roughness={0.1} />
+        <boxGeometry args={[2, 0.55, 1.35]} />
+        <meshStandardMaterial color="#17222b" metalness={0.4} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.94, 0.25]}>
+        <boxGeometry args={[1.55, 0.3, 0.95]} />
+        <meshStandardMaterial color="#294153" metalness={0.5} roughness={0.12} />
       </mesh>
       <Wheel position={[-1.2, -0.5, 1.6]} />
       <Wheel position={[1.2, -0.5, 1.6]} />

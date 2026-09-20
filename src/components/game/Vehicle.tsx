@@ -193,13 +193,35 @@ export const Vehicle = ({
         ref={ref as any}
         castShadow
         receiveShadow
+        position={[0, 0.15, 0]}
       >
-        <boxGeometry args={[4, 1.5, 1.5]} />
+        <boxGeometry args={[3.8, 0.65, 1.75]} />
         <meshStandardMaterial
           color={carConfig.color}
-          metalness={0.9}
-          roughness={0.1}
+          metalness={0.72}
+          roughness={0.22}
         />
+      </mesh>
+
+      <mesh position={[0, 0.7, 0.25]} castShadow>
+        <boxGeometry args={[2.0, 0.55, 1.35]} />
+        <meshStandardMaterial color="#151b22" metalness={0.35} roughness={0.18} />
+      </mesh>
+      <mesh position={[0, 0.72, 0.48]} castShadow>
+        <boxGeometry args={[1.55, 0.32, 0.95]} />
+        <meshStandardMaterial color="#263a4a" metalness={0.5} roughness={0.12} />
+      </mesh>
+      <mesh position={[0, 0.03, -1.0]} castShadow>
+        <boxGeometry args={[3.35, 0.12, 0.25]} />
+        <meshStandardMaterial color="#090b0d" metalness={0.25} roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 0.47, -1.0]} castShadow>
+        <boxGeometry args={[2.55, 0.08, 0.16]} />
+        <meshStandardMaterial color={carConfig.color} emissive={carConfig.color} emissiveIntensity={0.35} />
+      </mesh>
+      <mesh position={[0, 0.22, 1.0]} castShadow>
+        <boxGeometry args={[3.2, 0.1, 0.18]} />
+        <meshStandardMaterial color="#d7e5e8" emissive="#d7e5e8" emissiveIntensity={0.4} />
       </mesh>
 
       {wheelPositions.map((pos, i) => (
@@ -212,8 +234,12 @@ export const Vehicle = ({
 const WheelComponent = ({ position }: { position: [number, number, number] }) => {
   return (
     <mesh position={position} rotation={[0, 0, Math.PI / 2]} castShadow>
-      <cylinderGeometry args={[0.35, 0.35, 0.3, 32]} />
-      <meshStandardMaterial color="#111" metalness={0.95} roughness={0.05} />
+      <cylinderGeometry args={[0.42, 0.42, 0.34, 16]} />
+      <meshStandardMaterial color="#0a0d10" metalness={0.8} roughness={0.2} />
+      <mesh position={[0, 0.18, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 0.02, 12]} />
+        <meshStandardMaterial color="#b7c1c4" metalness={0.85} roughness={0.18} />
+      </mesh>
     </mesh>
   );
 };
