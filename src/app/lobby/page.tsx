@@ -11,7 +11,7 @@ import { useMultiplayer } from "@/hooks/useMultiplayer";
 const LobbyPage = () => {
   const [mode, setMode] = useState<"create" | "join">("create");
   const { roomCode, isHost, players, settings, isReady, isLoading, error: lobbyError } = useLobbyStore();
-  const { createRoom, joinRoom, disconnect } = useMultiplayer();
+  const { createRoom, joinRoom, disconnect, isConnected } = useMultiplayer();
   const [playerName, setPlayerName] = useState("Racer");
   const [joinCode, setJoinCode] = useState("");
 
@@ -47,6 +47,11 @@ const LobbyPage = () => {
             <p className="text-secondary max-w-2xl mx-auto text-lg">
               Create a room to race friends, or join an existing room with a 6-character code.
             </p>
+            {!isConnected && (
+              <p className="mt-4 text-sm text-amber-300" role="status">
+                Multiplayer server unavailable. Start the game server to create or join a room.
+              </p>
+            )}
           </motion.div>
 
           <div className="flex gap-4 mb-8">

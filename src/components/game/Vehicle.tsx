@@ -23,6 +23,7 @@ interface VehicleProps {
     rotation: { x: number; y: number; z: number; w: number };
     velocity: Vector3;
   } | null;
+  objectRef?: React.MutableRefObject<THREE.Object3D | null>;
 }
 
 export const Vehicle = ({
@@ -33,6 +34,7 @@ export const Vehicle = ({
   rotation = [0, 0, 0],
   networked = false,
   networkedState = null,
+  objectRef,
 }: VehicleProps) => {
   const controls = useVehicleControls();
   const particles = useParticles();
@@ -61,10 +63,11 @@ export const Vehicle = ({
   }) as any);
 
   useEffect(() => {
+    if (objectRef) objectRef.current = ref.current;
     return api.velocity.subscribe((v: [number, number, number]) => {
       velocityRef.current = v;
     });
-  }, [api.velocity]);
+  }, [api.velocity, objectRef, ref]);
 
   useFrame((state, delta) => {
     if (!ref.current) return;
@@ -112,7 +115,10 @@ export const Vehicle = ({
     const effectiveTorque = engineTorque * getDamageMultiplier((damageRef.current.front + damageRef.current.rear) / 2);
 
     if (Math.abs(steerAngle) > 0.01) {
-      api.applyTorque([0, -steerAngle * 200, 0] as [number, number, number]);
+      const yawRate = steerAngle * Math.min(1, speedKmh / 35) * 2.5;
+      api.angularVelocity.set(0, -yawRate, 0);
+    } else {
+      api.angularVelocity.set(0, 0, 0);
     }
 
     const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(ref.current.quaternion);
@@ -126,7 +132,11 @@ export const Vehicle = ({
     }
 
     if (brakeInput) {
-      api.applyForce([0, 0, 500] as [number, number, number], ref.current.position.toArray() as [number, number, number]);
+      const velocity = new THREE.Vector3(vx, vy, vz);
+      const brakeForce = velocity.length() > 0.01
+        ? velocity.normalize().multiplyScalar(-Math.min(1800, velocity.length() * 900)).toArray() as [number, number, number]
+        : [0, 0, 0] as [number, number, number];
+      api.applyForce(brakeForce, ref.current.position.toArray() as [number, number, number]);
     }
 
     if (handbrakeInput) {
@@ -207,7 +217,7 @@ export const Vehicle = ({
 
 const WheelComponent = ({ position }: { position: [number, number, number] }) => {
   return (
-    <mesh position={position} castShadow>
+    <mesh position={position} rotation={[0, 0, Math.PI / 2]} castShadow>
       <cylinderGeometry args={[0.35, 0.35, 0.3, 32]} />
       <meshStandardMaterial color="#111" metalness={0.95} roughness={0.05} />
     </mesh>

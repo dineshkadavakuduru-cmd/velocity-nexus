@@ -44,19 +44,19 @@ const HeroSection = () => {
         <main className="relative z-10 flex flex-col items-center flex-1 w-full">
           <div className="relative w-full max-w-4xl mx-auto text-center py-16 sm:py-24 px-6">
             <h1 className="mb-4 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight neon-text">
-              RACING
+               Find your line.
             </h1>
 
             <p className="text-lg sm:text-xl text-secondary max-w-2xl mx-auto mb-8">
-              Browser-based 3D supercar racing with real-time multiplayer, cinematic
-              visuals, and spatial audio.
+               A focused browser racer built around clean handling, readable tracks, and
+               real competition. Pick a car, learn the circuit, and chase a better lap.
             </p>
 
             <a
               href="/race?mode=single"
               className="hero-cta inline-flex items-center justify-center px-8 py-4 text-xl tracking-widest"
             >
-              PLAY NOW
+               Start a race
             </a>
           </div>
 

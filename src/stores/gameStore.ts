@@ -41,6 +41,7 @@ interface GameState {
   setRaceTime: (time: number) => void;
   setCountdown: (count: number) => void;
   setLapData: (lap: number, checkpoint: number, totalCheckpoints: number) => void;
+  setTotalLaps: (laps: number) => void;
   setPosition: (pos: number) => void;
   setVehicleState: (speed: number, rpm: number, gear: number, throttle: number, steering: number, brake: boolean, handbrake: boolean, nitro: boolean) => void;
   setNitroLevel: (level: number) => void;
@@ -72,7 +73,7 @@ export const useGameStore = create<GameState>()(
         currentLap: 1,
         totalLaps: 3,
         checkpoint: 0,
-        totalCheckpoints: 10,
+         totalCheckpoints: 10,
         position: 1,
         speedKmh: 0,
         rpm: 800,
@@ -117,6 +118,8 @@ export const useGameStore = create<GameState>()(
             totalCheckpoints: total,
           }),
 
+        setTotalLaps: (laps) => set({ totalLaps: Math.max(1, laps) }),
+
         setPosition: (pos) => set({ position: pos }),
 
         setVehicleState: (speed, rpm, gear, throttle, steering, brake, handbrake, nitro) =>
@@ -154,7 +157,7 @@ export const useGameStore = create<GameState>()(
 
         setRaceResults: (results) => set({ raceResults: results, raceFinished: results !== null }),
 
-        resetRace: () =>
+         resetRace: () =>
           set({
             players: {},
             raceStatus: "lobby",
@@ -176,8 +179,9 @@ export const useGameStore = create<GameState>()(
             driftPoints: 0,
             driftCombo: 0,
             raceFinished: false,
-            raceResults: null,
-          }),
+             raceResults: null,
+             totalCheckpoints: 10,
+           }),
 
         addPlayer: (player) =>
           set((prev) => ({

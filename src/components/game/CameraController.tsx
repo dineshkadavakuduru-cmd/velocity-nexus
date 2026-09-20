@@ -10,7 +10,7 @@ import * as THREE from "three";
 type CameraMode = "chase" | "cockpit" | "cinematic";
 
 interface CameraControllerProps {
-  playerRef: React.RefObject<THREE.Object3D>;
+  playerRef: React.RefObject<THREE.Object3D | null>;
   cameraMode?: CameraMode;
 }
 
@@ -42,11 +42,8 @@ export const CameraController = ({
     const pos = player.position;
     const quat = player.quaternion;
 
-    const playerVel = new THREE.Vector3(
-      gameStore.speedKmh * 0.05,
-      0,
-      0
-    );
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
+    const playerVel = forward.multiplyScalar(gameStore.speedKmh * 0.05);
     speedFactorRef.current = THREE.MathUtils.lerp(
       speedFactorRef.current,
       Math.min(gameStore.speedKmh / 400, 1),

@@ -16,8 +16,8 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "Velocity Nexus | 3D Multiplayer Exotic Car Racing",
-  description: "Race exotic supercars in a browser-based 3D racing game with real-time multiplayer, stunning visuals, and cinematic audio.",
+  title: "Velocity Nexus | Browser Racing",
+  description: "A focused browser racing game with readable circuits, responsive handling, and online rooms.",
   keywords: ["3D racing", "supercar", "multiplayer", "WebGL", "game", "racing", "three.js"],
 };
 

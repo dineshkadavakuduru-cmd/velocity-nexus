@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import LoadingScreen from "@/components/screens/LoadingScreen";
 import { QualityPreset } from "@/types";
+import { useGameStore } from "@/stores/gameStore";
 
 const DynamicGameCanvas = dynamic(
   () => import("@/components/game/GameCanvas").then((mod) => mod.GameCanvas),
@@ -21,6 +22,7 @@ function RaceContent() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    useGameStore.getState().resetRace();
     const timer = setTimeout(() => setIsReady(true), 100);
     return () => clearTimeout(timer);
   }, []);

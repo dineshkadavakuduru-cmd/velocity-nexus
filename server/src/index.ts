@@ -67,7 +67,11 @@ const createRoom = (io: Server, settings: RaceSettings, hostSocketId: string): R
   const room: Room = {
     roomCode,
     players: new Map(),
-    settings,
+    settings: {
+      ...settings,
+      laps: Math.max(1, Math.min(10, settings.laps || 3)),
+      maxPlayers: Math.max(2, Math.min(8, settings.maxPlayers || 8)),
+    },
     status: "lobby",
     hostId: hostSocketId,
     createdAt: Date.now(),
@@ -210,7 +214,7 @@ const setupSocketServer = (io: Server) => {
         finishTime: 0,
         carId: data.settings.carId || "phantom-gt",
         isAI: false,
-        isReady: false,
+        isReady: true,
         isConnected: true,
       };
 

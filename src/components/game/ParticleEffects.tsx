@@ -25,7 +25,7 @@ export const ParticleEffects = ({
   playerRef,
   quality = "High",
 }: {
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   quality?: "Ultra" | "High" | "Medium" | "Low";
 }) => {
   const { speedKmh, handbrake, nitro, throttle } = useGameStore();
@@ -73,7 +73,7 @@ const SmokeParticles = ({
   texture,
   maxParticles,
 }: {
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   speedKmh: number;
   handbrake: boolean;
   texture: THREE.Texture;
@@ -164,7 +164,7 @@ const SparkParticles = ({
   texture,
   maxParticles,
 }: {
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   speedKmh: number;
   texture: THREE.Texture;
   maxParticles: number;
@@ -235,7 +235,7 @@ const NitroFlames = ({
   texture,
   maxParticles,
 }: {
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   isNitro: boolean;
   texture: THREE.Texture;
   maxParticles: number;

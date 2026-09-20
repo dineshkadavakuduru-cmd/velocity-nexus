@@ -9,7 +9,9 @@ import { PlayerState, RaceSettings, RaceStatus, SocketEvents } from "@/types";
 import { GAME_CONSTANTS } from "@/lib/constants";
 import { setPlayerStateSnapshot, getInterpolatedPlayerState, getInterpolatedRotation } from "@/lib/interpolation";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || (
+  process.env.NODE_ENV === "development" ? "http://localhost:3001" : ""
+);
 
 let socket: Socket | null = null;
 
@@ -181,14 +183,18 @@ export const useMultiplayer = () => {
 
     s.emit("create_room", { settings: raceSettings });
 
-    s.once("room_created", (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean }) => {
+     s.once("room_created", (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean }) => {
       setRoomCode(data.roomCode);
       setPlayers(data.players);
       setSettings(data.settings);
-      setIsHost(true);
-      setIsLoading(false);
+       setIsHost(true);
+       if (data.players[0]) {
+         setLocalPlayerId(data.players[0].id);
+         useGameStore.getState().addPlayer(data.players[0]);
+       }
+       setIsLoading(false);
     });
-  }, [connect, setRoomCode, setPlayers, setSettings, setIsHost, setIsLoading, setError]);
+  }, [connect, setRoomCode, setPlayers, setSettings, setIsHost, setLocalPlayerId, setIsLoading, setError]);
 
   const joinRoom = useCallback((roomCode: string, playerName: string) => {
     if (!hasSocketUrl()) {

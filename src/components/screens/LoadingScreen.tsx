@@ -88,7 +88,7 @@ const LoadingScreen = ({ onComplete, progress: externalProgress }: LoadingScreen
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1, repeat: Infinity }}
             >
-              Loading... {Math.round(progress)}%
+              Preparing the track... {Math.round(progress)}%
             </motion.div>
 
             <motion.div

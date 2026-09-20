@@ -7,7 +7,7 @@ import { COLORS } from "@/lib/constants";
 import * as THREE from "three";
 
 interface TrailEffectProps {
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   enabled?: boolean;
   maxTrails?: number;
 }

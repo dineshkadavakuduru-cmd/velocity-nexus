@@ -11,12 +11,14 @@ import * as THREE from "three";
 interface TrackProps {
   trackId?: string;
   onLoadComplete?: () => void;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
+  onCheckpoint?: (index: number) => void;
 }
 
 interface CheckpointProps {
   position: [number, number, number];
   index: number;
-  playerRef?: React.RefObject<THREE.Object3D>;
+  playerRef?: React.RefObject<THREE.Object3D | null>;
   onComplete?: (index: number) => void;
 }
 
@@ -32,9 +34,9 @@ export const Checkpoint = ({ position, index, playerRef, onComplete }: Checkpoin
   });
 
   return (
-    <mesh ref={checkpointRef} position={position} visible={false}>
-      <boxGeometry args={[5, 3, 0.2]} />
-      <meshBasicMaterial transparent opacity={0} />
+    <mesh ref={checkpointRef} position={position}>
+      <torusGeometry args={[3, 0.08, 8, 32]} />
+      <meshBasicMaterial color={index === 0 ? "#f59e0b" : "#64d8ff"} transparent opacity={0.45} />
     </mesh>
   );
 };
@@ -213,6 +215,8 @@ export const StartLine = ({
 export const Track = ({
   trackId = "neon-tokyo",
   onLoadComplete,
+  playerRef,
+  onCheckpoint,
 }: TrackProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -237,8 +241,8 @@ export const Track = ({
   };
 
   const checkpoints: [number, number, number][] = Array.from({ length: 10 }, (_, i) => {
-    const angle = (i / 10) * Math.PI * 2;
-    const radius = 50;
+    const angle = Math.PI / 2 + (i / 10) * Math.PI * 2;
+    const radius = 34;
     return [Math.cos(angle) * radius, 1, Math.sin(angle) * radius];
   });
 
@@ -256,6 +260,15 @@ export const Track = ({
       <ProceduralTrack trackId={trackId} />
       <StartLine positions={startPositions} />
       <TrackBarriers trackBounds={trackBounds} />
+      {checkpoints.map((position, index) => (
+        <Checkpoint
+          key={`checkpoint-${index}`}
+          position={position}
+          index={index}
+          playerRef={playerRef}
+          onComplete={onCheckpoint}
+        />
+      ))}
     </group>
   );
 };

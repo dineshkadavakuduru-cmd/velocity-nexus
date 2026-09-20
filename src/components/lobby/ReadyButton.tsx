@@ -9,7 +9,7 @@ import { COLORS, TRACK_CONFIGS } from "@/lib/constants";
 
 export const ReadyButton = () => {
   const { isHost, isReady, setReady, settings, players, roomCode } = useLobbyStore();
-  const { startRace } = useMultiplayer();
+  const { startRace, setPlayerReady } = useMultiplayer();
   const [allReady, setAllReady] = useState(false);
 
   useEffect(() => {
@@ -25,8 +25,9 @@ export const ReadyButton = () => {
 
   const handleReadyToggle = useCallback(() => {
     const newReady = !isReady;
+    setPlayerReady(newReady);
     setReady(newReady);
-  }, [isReady, setReady]);
+  }, [isReady, setReady, setPlayerReady]);
 
   return (
     <div className="flex flex-col items-center gap-4">

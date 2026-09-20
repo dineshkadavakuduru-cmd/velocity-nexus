@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Suspense, useRef, useEffect } from "react";
+import { Suspense, useRef, useEffect, useCallback } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/cannon";
 import { Environment, Stats } from "@react-three/drei";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui";
 import { useGameStore } from "@/stores/gameStore";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
-import { useGameLoop, useCountdown } from "@/hooks/useGameLoop";
+import { useGameLoop, useCountdown, useRaceTimer } from "@/hooks/useGameLoop";
 import { CAR_CONFIGS, TRACK_CONFIGS, COLORS } from "@/lib/constants";
 import { PlayerState, QualityPreset } from "@/types";
 
@@ -32,9 +32,29 @@ const GameScene = ({
   quality: QualityPreset;
 }) => {
   const { gl } = useThree();
-  const vehicleRef = useRef<THREE.Group>(null!);
+  const vehicleRef = useRef<THREE.Object3D | null>(null);
   const { localPlayerId, selectedCarId, selectedTrackId } = useGameStore();
   const multiplayer = useMultiplayer();
+  const onCheckpoint = useCallback((index: number) => {
+    const state = useGameStore.getState();
+    const expected = state.checkpoint % state.totalCheckpoints;
+    if (index !== expected || state.raceStatus !== "racing") return;
+
+    const nextCheckpoint = state.checkpoint + 1;
+    if (nextCheckpoint >= state.totalCheckpoints) {
+      const nextLap = state.currentLap + 1;
+      if (nextLap > state.totalLaps) {
+        state.setRaceStatus("finished");
+        state.setRaceResults([
+          { id: state.localPlayerId || "local", name: "You", finishTime: state.raceTime, position: 1 },
+        ]);
+        return;
+      }
+      state.setLapData(nextLap, 0, state.totalCheckpoints);
+    } else {
+      state.setLapData(state.currentLap, nextCheckpoint, state.totalCheckpoints);
+    }
+  }, []);
 
   const trackConfig = TRACK_CONFIGS.find((t) => t.id === selectedTrackId) || TRACK_CONFIGS[0];
 
@@ -56,6 +76,10 @@ const GameScene = ({
     }
   }, [mode]);
 
+  useEffect(() => {
+    useGameStore.getState().setTotalLaps(trackConfig.laps);
+  }, [trackConfig.laps]);
+
   return (
     <>
       <WeatherSystem weather={trackConfig.weather} timeOfDay={trackConfig.timeOfDay} />
@@ -74,17 +98,18 @@ const GameScene = ({
       />
 
       <Physics gravity={[0, -9.81, 0]}>
-        <Track trackId={trackConfig.id} />
+         <Track trackId={trackConfig.id} playerRef={vehicleRef} onCheckpoint={onCheckpoint} />
 
-        <group ref={vehicleRef}>
-          <Vehicle
-            carId={selectedCarId}
+            <Vehicle
+             carId={selectedCarId}
             isLocal={true}
             playerId={localPlayerId}
-            networked={mode === "multiplayer"}
-          />
+              networked={mode === "multiplayer"}
+              objectRef={vehicleRef}
+              position={[0, 1, 33]}
+            />
 
-          {mode === "single" &&
+           {mode === "single" &&
             Array.from({ length: showAIAmount }).map((_, i) => (
               <AIVehicle
                 key={`ai-${i}`}
@@ -95,7 +120,7 @@ const GameScene = ({
               />
             ))}
 
-          {mode === "multiplayer" &&
+           {mode === "multiplayer" &&
             multiplayer.remotePlayers?.map((player: PlayerState) => (
               <OpponentVehicle
                 key={player.id}
@@ -103,7 +128,6 @@ const GameScene = ({
                 interpolationBuffer={true}
               />
             ))}
-        </group>
       </Physics>
 
       <CameraController playerRef={vehicleRef} cameraMode="chase" />
@@ -149,6 +173,7 @@ export const GameCanvas = ({
   const multiplayer = useMultiplayer();
   const { subscribeFixed } = useGameLoop({ enabled: mode === "multiplayer" });
   useCountdown();
+  useRaceTimer();
 
   useEffect(() => {
     if (mode === "multiplayer") {
