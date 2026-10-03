@@ -11,7 +11,7 @@ import { useMultiplayer } from "@/hooks/useMultiplayer";
 const LobbyPage = () => {
   const [mode, setMode] = useState<"create" | "join">("create");
   const { roomCode, isHost, players, settings, isReady, isLoading, error: lobbyError } = useLobbyStore();
-  const { createRoom, joinRoom, disconnect, isConnected } = useMultiplayer();
+  const { createRoom, joinRoom, leaveRoom, isConnected } = useMultiplayer();
   const [playerName, setPlayerName] = useState("Racer");
   const [joinCode, setJoinCode] = useState("");
 
@@ -118,6 +118,7 @@ const LobbyPage = () => {
                   <div className="mt-4">
                     <motion.button
                       onClick={handleCreateRoom}
+                      disabled={isLoading}
                       className="w-full px-6 py-3 rounded-xl font-display font-bold text-lg"
                       style={{
                         background: `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.secondary}40)`,
@@ -173,7 +174,7 @@ const LobbyPage = () => {
 
                   <motion.button
                     onClick={handleJoinRoom}
-                    disabled={joinCode.length !== 6}
+                    disabled={joinCode.length !== 6 || isLoading}
                     className="mt-4 w-full px-6 py-3 rounded-xl font-display font-bold text-lg transition-all"
                     style={{
                       background: joinCode.length === 6
@@ -234,6 +235,14 @@ const LobbyPage = () => {
 
           <div className="space-y-6">
             <ReadyButton />
+            <motion.button
+              onClick={leaveRoom}
+              className="w-full px-6 py-2 rounded-xl font-display font-bold text-sm"
+              style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary }}
+              whileTap={{ scale: 0.95 }}
+            >
+              LEAVE ROOM
+            </motion.button>
           </div>
         </div>
       </div>

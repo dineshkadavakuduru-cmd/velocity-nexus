@@ -151,6 +151,26 @@ export const CAR_CONFIG_MAP: Record<string, VehicleConfig> = CAR_CONFIGS.reduce(
   {} as Record<string, VehicleConfig>
 );
 
+// Single source of truth for spawn + checkpoint layout, shared with
+// src/components/game/Track.tsx. Cars and tracks render procedurally;
+// the `model` fields below are reserved identifiers for future GLB assets.
+const GRID_START_POSITIONS = [
+  { x: 0, y: 1, z: 30 },
+  { x: 6, y: 1, z: 30 },
+  { x: -6, y: 1, z: 30 },
+  { x: 0, y: 1, z: 24 },
+  { x: 6, y: 1, z: 24 },
+  { x: -6, y: 1, z: 24 },
+  { x: 0, y: 1, z: 18 },
+  { x: -6, y: 1, z: 18 },
+];
+
+const RING_CHECKPOINTS = Array.from({ length: 10 }, (_, i) => {
+  const angle = Math.PI / 2 + (i / 10) * Math.PI * 2;
+  const radius = 34;
+  return { x: Math.cos(angle) * radius, y: 1, z: Math.sin(angle) * radius };
+});
+
 export const TRACK_CONFIGS: TrackConfig[] = [
   {
     id: "neon-tokyo",
@@ -164,8 +184,8 @@ export const TRACK_CONFIGS: TrackConfig[] = [
     timeOfDay: "night",
     thumbnail: "neon-tokyo.jpg",
     description: "Tight neon-lit corners through the heart of a futuristic city. Rain slicks the streets for maximum challenge.",
-    checkpoints: [],
-    startPositions: [],
+    checkpoints: RING_CHECKPOINTS.map((c) => ({ ...c })),
+    startPositions: GRID_START_POSITIONS.map((c) => ({ ...c })),
   },
   {
     id: "dubai-highway",
@@ -179,8 +199,8 @@ export const TRACK_CONFIGS: TrackConfig[] = [
     timeOfDay: "sunset",
     thumbnail: "dubai-highway.jpg",
     description: "Long sweeping straights and desert curves bathed in golden sunset light. Perfect for high-speed runs.",
-    checkpoints: [],
-    startPositions: [],
+    checkpoints: RING_CHECKPOINTS.map((c) => ({ ...c })),
+    startPositions: GRID_START_POSITIONS.map((c) => ({ ...c })),
   },
   {
     id: "monaco-coast",
@@ -194,8 +214,8 @@ export const TRACK_CONFIGS: TrackConfig[] = [
     timeOfDay: "day",
     thumbnail: "monaco-coast.jpg",
     description: "Mediterranean coastal circuit with elevation changes, tight tunnels, and sweeping ocean views.",
-    checkpoints: [],
-    startPositions: [],
+    checkpoints: RING_CHECKPOINTS.map((c) => ({ ...c })),
+    startPositions: GRID_START_POSITIONS.map((c) => ({ ...c })),
   },
 ];
 

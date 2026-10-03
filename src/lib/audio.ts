@@ -39,20 +39,20 @@ const audioManager: AudioManager = {
 };
 
 const soundConfig: Record<SoundName, { src: string; loop?: boolean; volume?: number; pool?: number }> = {
-  engineIdle: { src: "/sounds/engine-idle.mp3", loop: true, volume: 0 },
-  engineLow: { src: "/sounds/engine-rev.mp3", loop: true, volume: 0 },
-  engineMid: { src: "/sounds/engine-mid.mp3", loop: true, volume: 0 },
-  engineHigh: { src: "/sounds/engine-high.mp3", loop: true, volume: 0 },
-  tireScreech: { src: "/sounds/tire-screech.mp3", loop: true, volume: 0, pool: 5 },
-  crash: { src: "/sounds/crash.mp3", loop: false, volume: 1 },
-  nitro: { src: "/sounds/nitro.mp3", loop: true, volume: 0 },
-  countdownBeep: { src: "/sounds/countdown-beep.mp3", loop: false, volume: 1 },
-  raceStart: { src: "/sounds/race-start.mp3", loop: false, volume: 1 },
-  victory: { src: "/sounds/victory.mp3", loop: false, volume: 1 },
-  defeat: { src: "/sounds/defeat.mp3", loop: false, volume: 1 },
-  ambient1: { src: "/sounds/ambient-music-1.mp3", loop: true, volume: 0.5 },
-  ambient2: { src: "/sounds/ambient-music-2.mp3", loop: true, volume: 0.5 },
-  wind: { src: "/sounds/wind.mp3", loop: true, volume: 0 },
+  engineIdle: { src: "/sounds/engine-idle.wav", loop: true, volume: 0 },
+  engineLow: { src: "/sounds/engine-rev.wav", loop: true, volume: 0 },
+  engineMid: { src: "/sounds/engine-mid.wav", loop: true, volume: 0 },
+  engineHigh: { src: "/sounds/engine-high.wav", loop: true, volume: 0 },
+  tireScreech: { src: "/sounds/tire-screech.wav", loop: true, volume: 0, pool: 5 },
+  crash: { src: "/sounds/crash.wav", loop: false, volume: 1 },
+  nitro: { src: "/sounds/nitro.wav", loop: true, volume: 0 },
+  countdownBeep: { src: "/sounds/countdown-beep.wav", loop: false, volume: 1 },
+  raceStart: { src: "/sounds/race-start.wav", loop: false, volume: 1 },
+  victory: { src: "/sounds/victory.wav", loop: false, volume: 1 },
+  defeat: { src: "/sounds/defeat.wav", loop: false, volume: 1 },
+  ambient1: { src: "/sounds/ambient-music-1.wav", loop: true, volume: 0.5 },
+  ambient2: { src: "/sounds/ambient-music-2.wav", loop: true, volume: 0.5 },
+  wind: { src: "/sounds/wind.wav", loop: true, volume: 0 },
 };
 
 const activeSounds: Record<string, Howl> = {};

@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src/ && tsc --noEmit",
+    "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
+    "assets:check": "node scripts/check-assets.cjs",
+    "test:smoke": "npx tsx scripts/smoke.ts",
+    "sounds:generate": "node scripts/generate-sounds.cjs",
     "server:dev": "cd server && npx tsx watch src/index.ts",
     "server:build": "cd server && npm run build",
     "server:start": "cd server && npm start"

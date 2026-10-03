@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { useTexture } from "@react-three/drei";
 import { usePlane, useBox, useTrimesh } from "@react-three/cannon";
 import { TRACK_CONFIGS } from "@/lib/constants";
 import { TrackConfig, Vector3 } from "@/types";
@@ -222,16 +222,10 @@ export const Track = ({
 
   const track = TRACK_CONFIGS.find((t) => t.id === trackId) || TRACK_CONFIGS[0];
 
-  const startPositions: [number, number, number][] = [
-    [0, 1, 30],
-    [6, 1, 30],
-    [-6, 1, 30],
-    [0, 1, 24],
-    [6, 1, 24],
-    [-6, 1, 24],
-    [0, 1, 18],
-    [6, 1, 18],
-  ];
+  const startPositions: [number, number, number][] = (track.startPositions.length > 0
+    ? track.startPositions
+    : [{ x: 0, y: 1, z: 30 }]
+  ).map((v) => [v.x, v.y, v.z]);
 
   const trackBounds = {
     minX: -80,
@@ -240,11 +234,7 @@ export const Track = ({
     maxZ: 80,
   };
 
-  const checkpoints: [number, number, number][] = Array.from({ length: 10 }, (_, i) => {
-    const angle = Math.PI / 2 + (i / 10) * Math.PI * 2;
-    const radius = 34;
-    return [Math.cos(angle) * radius, 1, Math.sin(angle) * radius];
-  });
+  const checkpoints: [number, number, number][] = track.checkpoints.map((v) => [v.x, v.y, v.z]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

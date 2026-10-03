@@ -3,19 +3,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLobbyStore } from "@/stores/lobbyStore";
+import { useMultiplayer } from "@/hooks/useMultiplayer";
 import { COLORS } from "@/lib/constants";
 
-type ChatMessage = {
-  id: string;
-  playerId: string;
-  playerName: string;
-  message: string;
-  timestamp: number;
-};
-
 export const ChatBox = () => {
-  const { players } = useLobbyStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const players = useLobbyStore((s) => s.players);
+  const messages = useLobbyStore((s) => s.messages);
+  const { sendChatMessage } = useMultiplayer();
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,22 +24,12 @@ export const ChatBox = () => {
 
   const handleSendMessage = useCallback(() => {
     if (inputValue.trim() === "") return;
-
-    const newMessage: ChatMessage = {
-      id: `${Date.now()}-${Math.random()}`,
-      playerId: "local",
-      playerName: "You",
-      message: inputValue.trim(),
-      timestamp: Date.now(),
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
+    sendChatMessage(inputValue);
     setInputValue("");
-
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
-  }, [inputValue]);
+  }, [inputValue, sendChatMessage]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -78,7 +62,6 @@ export const ChatBox = () => {
 
       <div
         className="h-48 overflow-y-auto p-3 space-y-2"
-        ref={messagesEndRef}
       >
         <AnimatePresence>
           {messages.map((msg) => (
@@ -123,6 +106,7 @@ export const ChatBox = () => {
             No messages yet. Say hello!
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-3 border-t" style={{ borderTopColor: COLORS.border }}>
@@ -158,5 +142,3 @@ export const ChatBox = () => {
     </div>
   );
 };
-
-

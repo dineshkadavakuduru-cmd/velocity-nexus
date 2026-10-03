@@ -1,7 +1,15 @@
 ﻿import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { PlayerState, RaceSettings, RaceStatus } from "@/types";
+import { PlayerState, RaceSettings } from "@/types";
 import { DEFAULT_RACE_SETTINGS } from "@/lib/constants";
+
+export type ChatMessage = {
+  id: string;
+  playerId: string;
+  playerName: string;
+  message: string;
+  timestamp: number;
+};
 
 interface LobbyState {
   roomCode: string | null;
@@ -12,6 +20,7 @@ interface LobbyState {
   isConnected: boolean;
   error: string | null;
   isLoading: boolean;
+  messages: ChatMessage[];
 
   setRoomCode: (code: string) => void;
   setPlayers: (players: PlayerState[]) => void;
@@ -24,8 +33,12 @@ interface LobbyState {
   setIsConnected: (connected: boolean) => void;
   setError: (error: string | null) => void;
   setIsLoading: (loading: boolean) => void;
+  addChatMessage: (message: Omit<ChatMessage, "id">) => void;
+  clearChat: () => void;
   resetLobby: () => void;
 }
+
+let chatSeq = 0;
 
 export const useLobbyStore = create<LobbyState>()(
   devtools((set) => ({
@@ -37,6 +50,7 @@ export const useLobbyStore = create<LobbyState>()(
     isConnected: false,
     error: null,
     isLoading: false,
+    messages: [],
 
     setRoomCode: (code) => set({ roomCode: code }),
 
@@ -77,6 +91,13 @@ export const useLobbyStore = create<LobbyState>()(
 
     setIsLoading: (loading) => set({ isLoading: loading }),
 
+    addChatMessage: (message) =>
+      set((prev) => ({
+        messages: [...prev.messages.slice(-99), { ...message, id: `${message.timestamp}-${chatSeq++}` }],
+      })),
+
+    clearChat: () => set({ messages: [] }),
+
     resetLobby: () =>
       set({
         roomCode: null,
@@ -87,6 +108,7 @@ export const useLobbyStore = create<LobbyState>()(
         isConnected: false,
         error: null,
         isLoading: false,
+        messages: [],
       }),
   }))
 );

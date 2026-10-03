@@ -16,6 +16,7 @@ export type PlayerState = {
   isAI: boolean;
   isReady: boolean;
   isConnected: boolean;
+  lastUpdateAt: number;
 };
 
 export type RaceSettings = {
@@ -38,6 +39,10 @@ export type Room = {
   hostId: string;
   createdAt: number;
   raceStartTime: number;
+  countdownInterval: NodeJS.Timeout | null;
+  tickInterval: NodeJS.Timeout | null;
+  finishTimeout: NodeJS.Timeout | null;
+  cleanupTimeout: NodeJS.Timeout | null;
 };
 
 export type PlayerUpdate = {
@@ -60,7 +65,7 @@ export type GameState = {
 };
 
 export type SocketEvents = {
-  create_room: (data: { settings: RaceSettings }) => void;
+  create_room: (data: { settings: RaceSettings; playerName?: string }) => void;
   join_room: (data: { roomCode: string; playerName: string }) => void;
   leave_room: () => void;
   ready_state: (data: { roomCode: string; isReady: boolean }) => void;

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NeonText, SparklesBackground, GlassmorphicPanel, MagneticButton } from "@/components/ui";
 import { COLORS, CAR_CONFIGS, TRACK_CONFIGS } from "@/lib/constants";
@@ -17,13 +17,15 @@ const ResultsPage = () => {
       const timer = setTimeout(() => setShowResults(true), 1500);
       return () => clearTimeout(timer);
     }
+    setShowResults(true);
   }, [raceResults]);
 
   const selectedCar = CAR_CONFIGS.find((c) => c.id === selectedCarId) || CAR_CONFIGS[0];
   const selectedTrack = TRACK_CONFIGS.find((t) => t.id === selectedTrackId) || TRACK_CONFIGS[0];
 
+  const isPlaceholder = !raceResults;
   const defaultResults = raceResults || [
-    { id: "1", name: "You", finishTime: raceTime || 65.43, position: 1 },
+    { id: "1", name: "You", finishTime: raceTime || 0, position: 1 },
   ];
 
   return (
@@ -92,6 +94,11 @@ const ResultsPage = () => {
                 <NeonText color={COLORS.primary} className="text-2xl mb-6 text-center">
                   LEADERBOARD
                 </NeonText>
+                {isPlaceholder && (
+                  <p className="text-center text-sm text-secondary mb-4">
+                    No race recorded yet. Finish a race to see real results.
+                  </p>
+                )}
 
                 <div className="space-y-3">
                   {defaultResults

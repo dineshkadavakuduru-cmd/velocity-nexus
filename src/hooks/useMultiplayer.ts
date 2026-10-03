@@ -1,127 +1,84 @@
 ﻿"use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { useGameStore } from "@/stores/gameStore";
 import { useLobbyStore } from "@/stores/lobbyStore";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { PlayerState, RaceSettings, RaceStatus, SocketEvents } from "@/types";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { PlayerState, RaceSettings, RaceStatus } from "@/types";
 import { setPlayerStateSnapshot, getInterpolatedPlayerState, getInterpolatedRotation } from "@/lib/interpolation";
+import {
+  disconnectSocket as destroySocket,
+  emitWithResponse,
+  hasSocketUrl,
+  initSocket,
+} from "@/lib/socket";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || (
-  process.env.NODE_ENV === "development" ? "http://localhost:3001" : ""
-);
-
-let socket: Socket | null = null;
-
-const hasSocketUrl = (): boolean => {
-  return !!SOCKET_URL && SOCKET_URL.trim() !== "";
-};
-
-const getSocket = (): Socket => {
-  if (!hasSocketUrl()) {
-    throw new Error("No socket URL configured");
-  }
-  if (!socket) {
-    socket = io(SOCKET_URL, {
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
-  }
-  return socket;
-};
+const UPDATE_THROTTLE_MS = 50;
 
 export const useMultiplayer = () => {
-  const {
-    players,
-    localPlayerId,
-    raceStatus,
-    raceTime,
-    setPlayerState,
-    setLocalPlayerId,
-    setRaceStatus,
-    setRaceTime,
-    setCountdown,
-    addPlayer: addPlayerToState,
-    removePlayer: removePlayerFromState,
-  } = useGameStore();
+  const raceStatus = useGameStore((s) => s.raceStatus);
+  const raceTime = useGameStore((s) => s.raceTime);
+  const players = useGameStore((s) => s.players);
+  const localPlayerId = useGameStore((s) => s.localPlayerId);
+  const countdown = useGameStore((s) => s.countdown);
 
-  const {
-    roomCode,
-    setRoomCode,
-    setPlayers,
-    addPlayer,
-    removePlayer,
-    updatePlayer,
-    setSettings,
-    setIsHost,
-    setReady,
-    setIsConnected,
-    setError,
-    setIsLoading,
-    settings,
-  } = useLobbyStore();
+  const roomCode = useLobbyStore((s) => s.roomCode);
+  const settings = useLobbyStore((s) => s.settings);
+  const lobbyConnected = useLobbyStore((s) => s.isConnected);
+  const lobbyHost = useLobbyStore((s) => s.isHost);
 
-  const settingsStore = useSettingsStore();
+  const listenersBoundRef = useRef(false);
+  const lastUpdateSentRef = useRef(0);
 
-  const isConnectedRef = useRef(false);
-
-  const connect = useCallback(() => {
-    if (!hasSocketUrl()) {
-      setIsConnected(false);
-      return null;
-    }
-
-    const s = getSocket();
-    if (isConnectedRef.current) return s;
-
-    setIsLoading(true);
+  const bindListeners = useCallback((s: Socket) => {
+    if (listenersBoundRef.current) return;
+    listenersBoundRef.current = true;
+    const lobby = useLobbyStore.getState;
+    const game = useGameStore.getState;
 
     s.on("connect", () => {
-      isConnectedRef.current = true;
-      setIsConnected(true);
-      setIsLoading(false);
-      setError(null);
+      lobby().setIsConnected(true);
+      lobby().setIsLoading(false);
+      lobby().setError(null);
     });
 
-    s.on("disconnect", (reason: string) => {
-      isConnectedRef.current = false;
-      setIsConnected(false);
+    s.on("disconnect", () => {
+      lobby().setIsConnected(false);
     });
 
     s.on("error", (message: string) => {
-      setError(message);
-      setIsLoading(false);
+      lobby().setError(typeof message === "string" ? message : "Server error");
+      lobby().setIsLoading(false);
     });
 
-    s.on("room_update", (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; isHost: boolean }) => {
-      setRoomCode(data.roomCode);
-      setPlayers(data.players);
-      setSettings(data.settings);
-      setIsHost(data.isHost);
+    s.on("room_update", (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string }) => {
+      lobby().setRoomCode(data.roomCode);
+      lobby().setPlayers(data.players);
+      lobby().setSettings(data.settings);
       data.players.forEach((p) => setPlayerStateSnapshot(p.id, p));
     });
 
     s.on("player_joined", (player: PlayerState) => {
-      addPlayer(player);
+      lobby().addPlayer(player);
       setPlayerStateSnapshot(player.id, player);
     });
 
     s.on("player_left", (playerId: string) => {
-      removePlayer(playerId);
-      removePlayerFromState(playerId);
+      lobby().removePlayer(playerId);
+      game().removePlayer(playerId);
+    });
+
+    s.on("room_closed", () => {
+      lobby().setError("Room was closed by the server");
     });
 
     s.on("countdown", (data: { count: number }) => {
-      setCountdown(data.count);
-      setRaceStatus("countdown");
+      game().setCountdown(data.count);
+      game().setRaceStatus("countdown");
     });
 
-    s.on("race_start", (data: { startTime: number }) => {
-      setRaceStatus("racing");
+    s.on("race_start", () => {
+      game().setRaceStatus("racing");
     });
 
     s.on("game_state", (data: {
@@ -129,10 +86,10 @@ export const useMultiplayer = () => {
       raceTime: number;
       raceStatus: RaceStatus;
     }) => {
-      setRaceTime(data.raceTime);
-      setRaceStatus(data.raceStatus);
+      game().setRaceTime(data.raceTime);
+      game().setRaceStatus(data.raceStatus);
       Object.entries(data.players).forEach(([id, state]) => {
-        setPlayerState(id, {
+        game().setPlayerState(id, {
           position: state.position,
           rotation: state.rotation,
           velocity: state.velocity,
@@ -144,117 +101,145 @@ export const useMultiplayer = () => {
           checkpoint: state.checkpoint,
           finished: state.finished,
         });
-        setPlayerStateSnapshot(id, {
-          id,
-          name: id,
-          ...state,
-        } as PlayerState);
+        setPlayerStateSnapshot(id, { id, name: id, ...state } as PlayerState);
       });
     });
 
     s.on("race_finish", (data: { results: Array<{ id: string; name: string; finishTime: number; position: number }> }) => {
-      setRaceStatus("finished");
-      useGameStore.getState().setRaceResults(data.results);
+      game().setRaceStatus("finished");
+      game().setRaceResults(data.results);
     });
 
     s.on("chat_message", (data: { playerId: string; playerName: string; message: string; timestamp: number }) => {
-      console.log("Chat:", data);
+      lobby().addChatMessage({
+        playerId: data.playerId,
+        playerName: data.playerName,
+        message: data.message,
+        timestamp: data.timestamp,
+      });
     });
+  }, []);
 
-    s.connect();
+  const connect = useCallback(() => {
+    if (!hasSocketUrl()) {
+      useLobbyStore.getState().setIsConnected(false);
+      return null;
+    }
+    const s = initSocket();
+    if (!s) return null;
+    useLobbyStore.getState().setIsLoading(true);
+    bindListeners(s);
+    if (!s.connected) s.connect();
+    else useLobbyStore.getState().setIsLoading(false);
     return s;
-  }, [
-    addPlayer, removePlayer, setRoomCode, setPlayers, setSettings, setIsHost,
-    setIsConnected, setError, setIsLoading, setPlayerState, localPlayerId,
-    addPlayerToState, removePlayerFromState, setRaceStatus, setRaceTime, setCountdown,
-  ]);
+  }, [bindListeners]);
 
-  const createRoom = useCallback((playerName: string, raceSettings: RaceSettings) => {
+  // Unbind on unmount so hot-reloads / navigation never stack listeners.
+  useEffect(() => {
+    return () => {
+      listenersBoundRef.current = false;
+    };
+  }, []);
+
+  const createRoom = useCallback(async (playerName: string, raceSettings: RaceSettings) => {
+    const lobby = useLobbyStore.getState();
+    const game = useGameStore.getState();
     if (!hasSocketUrl()) {
-      setError("Multiplayer server URL is not configured");
+      lobby.setError("Multiplayer server URL is not configured");
       return;
     }
-
     const s = connect();
     if (!s) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    s.emit("create_room", { settings: raceSettings });
-
-     s.once("room_created", (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean }) => {
-      setRoomCode(data.roomCode);
-      setPlayers(data.players);
-      setSettings(data.settings);
-       setIsHost(true);
-       if (data.players[0]) {
-         setLocalPlayerId(data.players[0].id);
-         useGameStore.getState().addPlayer(data.players[0]);
-       }
-       setIsLoading(false);
-    });
-  }, [connect, setRoomCode, setPlayers, setSettings, setIsHost, setLocalPlayerId, setIsLoading, setError]);
-
-  const joinRoom = useCallback((roomCode: string, playerName: string) => {
-    if (!hasSocketUrl()) {
-      setError("Multiplayer server URL is not configured");
-      return;
-    }
-
-    const s = connect();
-    if (!s) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    s.emit("join_room", { roomCode, playerName });
-
-    s.once("joined_room", (data: { success: boolean; roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string }) => {
-      if (data.success) {
-        setRoomCode(data.roomCode);
-        setPlayers(data.players);
-        setSettings(data.settings);
-        setIsHost(data.isHost);
-        setLocalPlayerId(data.playerId);
-        setIsLoading(false);
-      } else {
-        setError("Failed to join room");
-        setIsLoading(false);
+    lobby.setIsLoading(true);
+    lobby.setError(null);
+    try {
+      const data = await emitWithResponse<{
+        roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean;
+      }>("create_room", { settings: raceSettings, playerName }, "room_created");
+      lobby.setRoomCode(data.roomCode);
+      lobby.setPlayers(data.players);
+      lobby.setSettings(data.settings);
+      lobby.setIsHost(true);
+      const me = data.players.find((p) => p.name === playerName) ?? data.players[0];
+      if (me) {
+        game.setLocalPlayerId(me.id);
+        game.addPlayer(me);
       }
-    });
-  }, [connect, setRoomCode, setPlayers, setSettings, setIsHost, setLocalPlayerId, setIsLoading, setError]);
+      lobby.setIsLoading(false);
+    } catch (err) {
+      lobby.setError(err instanceof Error ? err.message : "Failed to create room");
+      lobby.setIsLoading(false);
+    }
+  }, [connect]);
+
+  const joinRoom = useCallback(async (code: string, playerName: string) => {
+    const lobby = useLobbyStore.getState();
+    const game = useGameStore.getState();
+    if (!hasSocketUrl()) {
+      lobby.setError("Multiplayer server URL is not configured");
+      return;
+    }
+    const s = connect();
+    if (!s) return;
+    lobby.setIsLoading(true);
+    lobby.setError(null);
+    try {
+      const data = await emitWithResponse<{
+        success: boolean; roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string;
+      }>("join_room", { roomCode: code.toUpperCase(), playerName }, "joined_room");
+      if (!data.success) throw new Error("Failed to join room");
+      lobby.setRoomCode(data.roomCode);
+      lobby.setPlayers(data.players);
+      lobby.setSettings(data.settings);
+      lobby.setIsHost(data.isHost);
+      game.setLocalPlayerId(data.playerId);
+      const me = data.players.find((p) => p.id === data.playerId);
+      if (me) game.addPlayer(me);
+      lobby.setIsLoading(false);
+    } catch (err) {
+      lobby.setError(err instanceof Error ? err.message : "Failed to join room");
+      lobby.setIsLoading(false);
+    }
+  }, [connect]);
+
+  const leaveRoom = useCallback(() => {
+    const lobby = useLobbyStore.getState();
+    const s = initSocket();
+    if (s?.connected && lobby.roomCode) {
+      s.emit("leave_room");
+    }
+    lobby.resetLobby();
+  }, []);
 
   const setPlayerReady = useCallback((ready: boolean) => {
-    if (!hasSocketUrl()) {
-      setReady(ready);
-      return;
+    useLobbyStore.getState().setReady(ready);
+    if (!hasSocketUrl()) return;
+    const s = initSocket();
+    const code = useLobbyStore.getState().roomCode;
+    if (s?.connected && code) {
+      s.emit("ready_state", { roomCode: code, isReady: ready });
     }
-
-    const s = getSocket();
-    if (s && roomCode) {
-      s.emit("ready_state", { roomCode, isReady: ready });
-    }
-    setReady(ready);
-  }, [roomCode, setReady]);
+  }, []);
 
   const startRace = useCallback(() => {
     if (!hasSocketUrl()) return;
-
-    const s = getSocket();
-    if (s && roomCode) {
-      s.emit("start_race", { roomCode });
+    const s = initSocket();
+    const code = useLobbyStore.getState().roomCode;
+    if (s?.connected && code) {
+      s.emit("start_race", { roomCode: code });
     }
-  }, [roomCode]);
+  }, []);
 
   const sendChatMessage = useCallback((message: string) => {
+    const trimmed = message.trim().slice(0, 200);
+    if (!trimmed) return;
     if (!hasSocketUrl()) return;
-
-    const s = getSocket();
-    if (s && roomCode) {
-      s.emit("chat_message", { roomCode, message });
+    const s = initSocket();
+    const code = useLobbyStore.getState().roomCode;
+    if (s?.connected && code) {
+      s.emit("chat_message", { roomCode: code, message: trimmed });
     }
-  }, [roomCode]);
+  }, []);
 
   const sendPlayerUpdate = useCallback((update: {
     position: { x: number; y: number; z: number };
@@ -268,55 +253,49 @@ export const useMultiplayer = () => {
     checkpoint: number;
   }) => {
     if (!hasSocketUrl()) return;
-
-    const s = getSocket();
-    if (s && roomCode && raceStatus === "racing") {
-      s.emit("player_update", { ...update, roomCode });
+    // Read live store state to avoid stale-closure gating.
+    const liveStatus = useGameStore.getState().raceStatus;
+    if (liveStatus !== "racing") return;
+    const now = Date.now();
+    if (now - lastUpdateSentRef.current < UPDATE_THROTTLE_MS) return;
+    lastUpdateSentRef.current = now;
+    const s = initSocket();
+    const code = useLobbyStore.getState().roomCode;
+    if (s?.connected && code) {
+      s.emit("player_update", { ...update, roomCode: code });
     }
-  }, [roomCode, raceStatus]);
-
-  const disconnect = useCallback(() => {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
-    }
-    isConnectedRef.current = false;
-    setIsConnected(false);
-  }, [setIsConnected]);
-
-  const getInterpolatedPosition = useCallback((playerId: string) => {
-    return getInterpolatedPlayerState(playerId);
   }, []);
 
-  const getInterpolatedRotation = useCallback((playerId: string) => {
-    return getInterpolatedRotation(playerId);
+  const disconnect = useCallback(() => {
+    destroySocket();
+    listenersBoundRef.current = false;
+    useLobbyStore.getState().setIsConnected(false);
   }, []);
 
   const localPlayer = Object.values(players).find((p: PlayerState) => p.id === localPlayerId);
   const remotePlayers = Object.values(players).filter((p: PlayerState) => p.id !== localPlayerId);
 
   return {
-    isConnected: useLobbyStore.getState().isConnected && hasSocketUrl(),
+    isConnected: lobbyConnected && hasSocketUrl(),
     roomCode,
     players,
     remotePlayers,
     localPlayer,
     settings,
-    isHost: useLobbyStore.getState().isHost,
+    isHost: lobbyHost,
     raceStatus,
     raceTime,
-    countdown: useGameStore.getState().countdown,
+    countdown,
     createRoom,
     joinRoom,
+    leaveRoom,
     setPlayerReady,
     startRace,
     sendChatMessage,
     sendPlayerUpdate,
     disconnect,
-    getInterpolatedPosition,
-    getInterpolatedRotation,
     connect,
+    getInterpolatedPosition: getInterpolatedPlayerState,
+    getInterpolatedRotation,
   };
 };
-
-export { getSocket as getSocketInstance };
