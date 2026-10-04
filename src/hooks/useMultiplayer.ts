@@ -7,10 +7,13 @@ import { useLobbyStore } from "@/stores/lobbyStore";
 import { PlayerState, RaceSettings, RaceStatus } from "@/types";
 import { setPlayerStateSnapshot, getInterpolatedPlayerState, getInterpolatedRotation } from "@/lib/interpolation";
 import {
+  connectSocket,
   disconnectSocket as destroySocket,
   emitWithResponse,
+  getConnectionState,
   hasSocketUrl,
   initSocket,
+  onConnectionStateChange,
 } from "@/lib/socket";
 
 const UPDATE_THROTTLE_MS = 50;
@@ -125,21 +128,38 @@ export const useMultiplayer = () => {
       useLobbyStore.getState().setIsConnected(false);
       return null;
     }
-    const s = initSocket();
+    const s = connectSocket();
     if (!s) return null;
     useLobbyStore.getState().setIsLoading(true);
     bindListeners(s);
-    if (!s.connected) s.connect();
-    else useLobbyStore.getState().setIsLoading(false);
+    if (s.connected) useLobbyStore.getState().setIsLoading(false);
     return s;
   }, [bindListeners]);
 
+  // Keep lobby isConnected in sync with the socket connection state machine.
   // Unbind on unmount so hot-reloads / navigation never stack listeners.
   useEffect(() => {
+    const unsub = onConnectionStateChange((state) => {
+      useLobbyStore.getState().setIsConnected(state === "CONNECTED");
+      if (state === "CONNECTED" || state === "SERVER_OFFLINE" || state === "DISCONNECTED") {
+        useLobbyStore.getState().setIsLoading(false);
+      }
+    });
+    // Sync initial state on mount.
+    useLobbyStore.getState().setIsConnected(getConnectionState() === "CONNECTED");
     return () => {
+      unsub();
       listenersBoundRef.current = false;
     };
   }, []);
+
+  // Auto-connect when a socket URL is configured so the lobby shows the
+  // real state instead of sitting on DISCONNECTED.
+  useEffect(() => {
+    if (hasSocketUrl()) {
+      connect();
+    }
+  }, [connect]);
 
   const createRoom = useCallback(async (playerName: string, raceSettings: RaceSettings) => {
     const lobby = useLobbyStore.getState();
@@ -149,7 +169,10 @@ export const useMultiplayer = () => {
       return;
     }
     const s = connect();
-    if (!s) return;
+    if (!s) {
+      lobby.setError("Multiplayer is currently unavailable. Please try single-player or try again later.");
+      return;
+    }
     lobby.setIsLoading(true);
     lobby.setError(null);
     try {
@@ -176,11 +199,14 @@ export const useMultiplayer = () => {
     const lobby = useLobbyStore.getState();
     const game = useGameStore.getState();
     if (!hasSocketUrl()) {
-      lobby.setError("Multiplayer server URL is not configured");
+      lobby.setError("Multiplayer is currently unavailable. Please try single-player or try again later.");
       return;
     }
     const s = connect();
-    if (!s) return;
+    if (!s) {
+      lobby.setError("Multiplayer is currently unavailable. Please try single-player or try again later.");
+      return;
+    }
     lobby.setIsLoading(true);
     lobby.setError(null);
     try {

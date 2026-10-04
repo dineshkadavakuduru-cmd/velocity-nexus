@@ -1,13 +1,16 @@
 ﻿"use client";
 
-import { Suspense, useRef, useEffect, useCallback } from "react";
+import { Suspense, useRef, useEffect, useCallback, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/cannon";
 import { Environment, Stats } from "@react-three/drei";
 import { motion, AnimatePresence } from "motion/react";
 import * as THREE from "three";
 
-import { Vehicle, Track, CameraController, PostProcessing, OpponentVehicle, AIVehicle, ParticleEffects, WeatherSystem, SpeedLines, TrailEffect } from "@/components/game";
+import { Vehicle, Track, CameraController, PostProcessing, OpponentVehicle, AIVehicle, ParticleEffects, WeatherSystem, SpeedLines, TrailEffect, TouchControls, QualityPanel } from "@/components/game";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { isWebGLAvailable, WEBGL_FALLBACK_MESSAGE } from "@/lib/webgl";
+import LoadingScreen from "@/components/screens/LoadingScreen";
 import {
   SpeedGauge,
   PositionIndicator,
@@ -27,13 +30,19 @@ import { PlayerState, QualityPreset } from "@/types";
 const GameScene = ({
   mode,
   quality,
+  shadowsEnabled,
+  bloomEnabled,
+  postEnabled,
 }: {
   mode: "single" | "multiplayer";
   quality: QualityPreset;
+  shadowsEnabled: boolean;
+  bloomEnabled: boolean;
+  postEnabled: boolean;
 }) => {
   const { gl } = useThree();
   const vehicleRef = useRef<THREE.Object3D | null>(null);
-  const { localPlayerId, selectedCarId, selectedTrackId } = useGameStore();
+  const { localPlayerId, selectedCarId, selectedTrackId, cameraMode } = useGameStore();
   const multiplayer = useMultiplayer();
   const onCheckpoint = useCallback((index: number) => {
     const state = useGameStore.getState();
@@ -62,10 +71,10 @@ const GameScene = ({
   const showAIAmount = Math.min(5, aiCount);
 
   useEffect(() => {
-    gl.shadowMap.enabled = true;
+    gl.shadowMap.enabled = shadowsEnabled && quality !== "Low";
     gl.shadowMap.type = THREE.PCFShadowMap;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
-  }, [gl]);
+  }, [gl, shadowsEnabled, quality]);
 
   useEffect(() => {
     if (mode === "single") {
@@ -88,7 +97,7 @@ const GameScene = ({
       <directionalLight
         position={[10, 20, 10]}
         intensity={trackConfig.timeOfDay === "night" ? 0.8 : 1.5}
-        castShadow
+        castShadow={shadowsEnabled && quality !== "Low"}
         shadow-mapSize={[2048, 2048]}
       />
 
@@ -131,13 +140,13 @@ const GameScene = ({
             ))}
       </Physics>
 
-      <CameraController playerRef={vehicleRef} cameraMode="chase" />
+      <CameraController playerRef={vehicleRef} cameraMode={cameraMode} />
 
       <ParticleEffects playerRef={vehicleRef} quality={quality} />
       <SpeedLines speed={useGameStore.getState().speedKmh} quality={quality} />
       <TrailEffect playerRef={vehicleRef} enabled={quality !== "Low"} />
 
-      <PostProcessing enabled={quality !== "Low"} quality={quality} />
+      <PostProcessing enabled={postEnabled && quality !== "Low"} bloom={bloomEnabled} quality={quality} />
 
       {quality === "Ultra" && <Stats />}
     </>
@@ -151,7 +160,7 @@ export interface GameCanvasProps {
 
 export const GameCanvas = ({
   mode = "single",
-  quality = "High",
+  quality: qualityProp = "High",
 }: GameCanvasProps) => {
   const speedKmh = useGameStore((s) => s.speedKmh);
   const rpm = useGameStore((s) => s.rpm);
@@ -170,6 +179,43 @@ export const GameCanvas = ({
   const raceResults = useGameStore((s) => s.raceResults);
   const localPlayerId = useGameStore((s) => s.localPlayerId);
   const players = useGameStore((s) => s.players);
+  const isPaused = useGameStore((s) => s.isPaused);
+  const driftPoints = useGameStore((s) => s.driftPoints);
+
+  // URL param wins on first load, then the persisted settings store owns it.
+  const storedQuality = useSettingsStore((s) => s.quality);
+  const postEnabled = useSettingsStore((s) => s.postProcessing);
+  const bloomEnabled = useSettingsStore((s) => s.postProcessing);
+  const shadowsEnabled = useSettingsStore((s) => s.shadows);
+  const quality: QualityPreset = storedQuality ?? qualityProp;
+
+  const [webGLok, setWebGLok] = useState<boolean | null>(null);
+  const [glError, setGlError] = useState<string | null>(null);
+  const [showQuality, setShowQuality] = useState(false);
+
+  useEffect(() => {
+    setWebGLok(isWebGLAvailable());
+  }, []);
+
+  // Camera: C cycles chase -> cockpit -> cinematic. Pause: Escape toggles.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "KeyC") {
+        const gs = useGameStore.getState();
+        const order = ["chase", "cockpit", "cinematic"] as const;
+        const next = order[(order.indexOf(gs.cameraMode as (typeof order)[number]) + 1) % order.length];
+        gs.setCameraMode(next);
+      }
+      if (e.code === "Escape") {
+        const gs = useGameStore.getState();
+        if (gs.raceStatus === "racing" || gs.raceStatus === "countdown") {
+          gs.setPaused(!gs.isPaused);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const multiplayer = useMultiplayer();
   const { subscribeFixed } = useGameLoop({ enabled: mode === "multiplayer" });
@@ -218,22 +264,108 @@ export const GameCanvas = ({
     finished: p.finished,
   }));
 
+  if (webGLok === false || glError) {
+    return (
+      <div className="relative w-full h-screen flex items-center justify-center bg-background px-6">
+        <div className="max-w-lg text-center rounded-2xl p-8" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.cardBg }}>
+          <h1 className="text-2xl font-display font-bold mb-3" style={{ color: COLORS.accent }}>
+            {WEBGL_FALLBACK_MESSAGE}
+          </h1>
+          <p className="text-secondary text-sm mb-2">
+            {glError ?? "WebGL is unavailable on this browser or device."}
+          </p>
+          <ul className="text-secondary text-sm text-left list-disc pl-6 mb-6 space-y-1">
+            <li>Use a recent version of Chrome, Edge, Firefox, or Safari.</li>
+            <li>Enable hardware acceleration in your browser settings.</li>
+            <li>Update your GPU drivers.</li>
+            <li>Disable aggressive privacy / WebGL-blocking extensions for this site.</li>
+          </ul>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 rounded-xl font-display font-bold"
+            style={{ border: `1px solid ${COLORS.primary}`, color: COLORS.primary }}
+          >
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (webGLok === null) {
+    return <LoadingScreen progress={20} />;
+  }
+
+  const dpr: [number, number] =
+    quality === "Low" ? [0.5, 1] : quality === "Medium" ? [0.75, 1.5] : [1, 2];
+
   return (
     <div className="relative w-full h-screen">
       <Canvas
+        key={`${quality}-${shadowsEnabled}-${postEnabled}`}
         camera={{ position: [0, 5, 15], fov: 70 }}
-        gl={{ antialias: quality !== "Low", preserveDrawingBuffer: true }}
+        dpr={dpr}
+        gl={{ antialias: quality === "High" || quality === "Ultra", preserveDrawingBuffer: true, powerPreference: "high-performance" }}
         onCreated={(state) => {
-          state.gl.shadowMap.enabled = true;
-          state.gl.shadowMap.type = THREE.PCFShadowMap;
+          try {
+            state.gl.shadowMap.enabled = shadowsEnabled && quality !== "Low";
+            state.gl.shadowMap.type = THREE.PCFShadowMap;
+          } catch (err) {
+            setGlError(err instanceof Error ? err.message : "Failed to initialize WebGL.");
+          }
         }}
+        onError={(err) => setGlError(err instanceof Error ? err.message : String(err))}
       >
         <Suspense fallback={null}>
-          <GameScene mode={mode} quality={quality} />
+          <GameScene
+            mode={mode}
+            quality={quality}
+            shadowsEnabled={shadowsEnabled}
+            bloomEnabled={bloomEnabled}
+            postEnabled={postEnabled}
+          />
         </Suspense>
       </Canvas>
 
       <CountdownOverlay count={countdown} />
+
+      {/* Quality + pause controls */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] flex gap-2">
+        <button
+          onClick={() => setShowQuality((v) => !v)}
+          className="px-4 py-1 rounded-full text-xs font-display font-bold"
+          style={{ background: "rgba(0,0,0,0.65)", border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }}
+        >
+          QUALITY: {quality.toUpperCase()}
+        </button>
+        {(raceStatus === "racing" || raceStatus === "countdown") && (
+          <button
+            onClick={() => useGameStore.getState().setPaused(!isPaused)}
+            className="px-4 py-1 rounded-full text-xs font-display font-bold"
+            style={{ background: "rgba(0,0,0,0.65)", border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }}
+          >
+            {isPaused ? "RESUME" : "PAUSE"}
+          </button>
+        )}
+      </div>
+      {showQuality && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[80] w-64">
+          <QualityPanel />
+        </div>
+      )}
+
+      {driftPoints > 0 && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80]">
+          <div
+            className="px-5 py-1 rounded-xl font-display font-bold"
+            style={{ background: "rgba(0,0,0,0.65)", border: `1px solid ${COLORS.secondary}`, color: COLORS.secondary }}
+          >
+            DRIFT +{driftPoints}
+          </div>
+        </div>
+      )}
+
+      <TouchControls onPause={() => useGameStore.getState().setPaused(true)} />
 
       <SpeedGauge
         speed={speedKmh}
@@ -278,6 +410,42 @@ export const GameCanvas = ({
       </motion.div>
 
       <AnimatePresence>
+        {isPaused && (raceStatus === "racing" || raceStatus === "countdown") && (
+          <motion.div
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="p-8 rounded-2xl text-center" style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.border}` }}>
+              <NeonText color={COLORS.primary} className="text-4xl mb-6">PAUSED</NeonText>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => useGameStore.getState().setPaused(false)}
+                  className="px-8 py-3 rounded-xl font-display font-bold"
+                  style={{ border: `1px solid ${COLORS.primary}`, color: COLORS.textPrimary }}
+                >
+                  RESUME
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-8 py-3 rounded-xl font-display font-bold"
+                  style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary }}
+                >
+                  RESTART RACE
+                </button>
+                <a
+                  href="/"
+                  className="px-8 py-3 rounded-xl font-display font-bold text-center"
+                  style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary }}
+                >
+                  QUIT TO MENU
+                </a>
+              </div>
+              <p className="mt-4 text-xs text-secondary">Press Escape to resume</p>
+            </div>
+          </motion.div>
+        )}
         {raceStatus === "finished" && raceResults && (
           <motion.div
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"

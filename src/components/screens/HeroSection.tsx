@@ -5,9 +5,9 @@ import { COLORS } from "@/lib/constants";
 const features = [
   { title: "EXOTIC SUPERCARS", description: "6 handcrafted exotic cars with authentic performance specs" },
   { title: "BREATH-TAKING TRACKS", description: "3 stunning environments from neon cities to coastal circuits" },
-  { title: "REAL-TIME MULTIPLAYER", description: "Race up to 8 players in real-time with synced physics" },
-  { title: "CINEMATIC VISUALS", description: "Bloom, motion blur, and post-processing for a premium feel" },
-  { title: "SPATIAL AUDIO", description: "Layered engine sounds and dynamic SFX that respond to your inputs" },
+  { title: "REAL-TIME MULTIPLAYER", description: "Race up to 8 players in real-time rooms when the multiplayer server is online" },
+  { title: "CINEMATIC VISUALS", description: "Bloom, speed lines, and post-processing for a premium feel" },
+  { title: "DYNAMIC AUDIO", description: "Layered engine sounds and dynamic SFX that respond to your inputs" },
   { title: "DRIFT MECHANICS", description: "Master drifting with realistic tire physics and scoring" },
 ];
 

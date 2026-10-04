@@ -94,20 +94,36 @@ export const useRaceTimer = () => {
 
   const { subscribeFixed } = useGameLoop({ enabled: raceStatus === "racing" });
   const startTimeRef = useRef<number>(0);
+  const pausedTotalRef = useRef<number>(0);
+  const pauseStartRef = useRef<number>(0);
 
   useEffect(() => {
     if (raceStatus === "racing" && startTimeRef.current === 0) {
       startTimeRef.current = performance.now();
+      pausedTotalRef.current = 0;
+      pauseStartRef.current = 0;
     } else if (raceStatus !== "racing") {
       startTimeRef.current = 0;
+      pausedTotalRef.current = 0;
+      pauseStartRef.current = 0;
     }
   }, [raceStatus]);
 
   useEffect(() => {
     if (raceStatus !== "racing") return;
 
-    return subscribeFixed((fixedDeltaTime) => {
-      const newTime = (performance.now() - startTimeRef.current) / 1000;
+    return subscribeFixed(() => {
+      const gs = useGameStore.getState();
+      const now = performance.now();
+      if (gs.isPaused) {
+        if (pauseStartRef.current === 0) pauseStartRef.current = now;
+        return;
+      }
+      if (pauseStartRef.current !== 0) {
+        pausedTotalRef.current += now - pauseStartRef.current;
+        pauseStartRef.current = 0;
+      }
+      const newTime = (now - startTimeRef.current - pausedTotalRef.current) / 1000;
       setRaceTime(newTime);
     });
   }, [raceStatus, subscribeFixed, setRaceTime]);

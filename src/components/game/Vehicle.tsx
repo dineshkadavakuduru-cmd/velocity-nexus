@@ -7,6 +7,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { useVehicleControls } from "@/hooks/useVehicleControls";
 import { CAR_CONFIGS } from "@/lib/constants";
 import { useParticles } from "@/hooks/useParticles";
+import { touchInput, resetTouchInput } from "@/lib/touch";
 import { getEngineRpm, getOptimalGear, getDamageMultiplier } from "@/lib/physics";
 import { VehicleConfig, Vector3 } from "@/types";
 import * as THREE from "three";
@@ -66,12 +67,19 @@ export const Vehicle = ({
     const handleKeyUp = (event: KeyboardEvent) => {
       directKeysRef.current[event.code] = false;
     };
+    const clearDirect = () => {
+      directKeysRef.current = {};
+      resetTouchInput();
+    };
     window.addEventListener("keydown", handleKeyDown, { passive: false });
     window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", () => { directKeysRef.current = {}; });
+    window.addEventListener("blur", clearDirect);
+    document.addEventListener("visibilitychange", clearDirect);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", clearDirect);
+      document.removeEventListener("visibilitychange", clearDirect);
     };
   }, [isLocal]);
 
@@ -92,6 +100,7 @@ export const Vehicle = ({
 
   useFrame((state, delta) => {
     if (!ref.current) return;
+    if (useGameStore.getState().isPaused) return;
 
     if (networked && !isLocal && networkedState) {
       ref.current.position.lerp(
@@ -122,11 +131,13 @@ export const Vehicle = ({
     }
 
     const keys = directKeysRef.current;
-    const directThrottle = keys.ArrowUp ? 1 : 0;
-    const directSteering = Number(Boolean(keys.ArrowLeft)) - Number(Boolean(keys.ArrowRight));
-    const directBrake = Boolean(keys.ArrowDown);
-    const directHandbrake = Boolean(keys.Space);
-    const directNitro = Boolean(keys.ShiftLeft || keys.ShiftRight);
+    const directThrottle = keys.ArrowUp || touchInput.forward ? 1 : 0;
+    const directSteering =
+      Number(Boolean(keys.ArrowLeft) || touchInput.left) -
+      Number(Boolean(keys.ArrowRight) || touchInput.right);
+    const directBrake = Boolean(keys.ArrowDown) || touchInput.backward;
+    const directHandbrake = Boolean(keys.Space) || touchInput.handbrake;
+    const directNitro = Boolean(keys.ShiftLeft || keys.ShiftRight) || touchInput.nitro;
     const steeringInput = directSteering || controls.steering;
     const throttleInput = Math.max(directThrottle, controls.throttle);
     const brakeInput = directBrake || controls.brake;
@@ -172,15 +183,22 @@ export const Vehicle = ({
 
       driftAngleRef.current = Math.abs(steeringInput);
       if (driftAngleRef.current > 0.3 && speedKmh > 20) {
+        const prev = driftScoreRef.current;
         driftScoreRef.current += delta * carConfig.driftModifier * 100;
-        if (Math.floor(driftScoreRef.current / 100) > Math.floor((driftScoreRef.current - delta * carConfig.driftModifier * 100) / 100)) {
+        useGameStore.getState().setDriftPoints(Math.floor(driftScoreRef.current));
+        useGameStore.getState().setDriftCombo(Math.floor(driftScoreRef.current / 500));
+        if (Math.floor(driftScoreRef.current / 100) > Math.floor(prev / 100)) {
           const pos: [number, number, number] = [ref.current.position.x, ref.current.position.y - 0.5, ref.current.position.z];
           particles.triggerTireSmoke(pos, driftAngleRef.current);
         }
       }
     } else {
       driftAngleRef.current *= 0.9;
-      driftScoreRef.current = 0;
+      if (driftScoreRef.current !== 0) {
+        driftScoreRef.current = 0;
+        useGameStore.getState().setDriftPoints(0);
+        useGameStore.getState().setDriftCombo(0);
+      }
     }
 
     if (nitroInput && nitroLevelRef.current > 0) {

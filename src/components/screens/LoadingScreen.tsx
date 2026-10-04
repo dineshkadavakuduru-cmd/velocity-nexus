@@ -9,15 +9,26 @@ import { CAR_CONFIGS } from "@/lib/constants";
 interface LoadingScreenProps {
   onComplete?: () => void;
   progress?: number;
+  error?: string | null;
+  onRetry?: () => void;
+  timeoutMs?: number;
 }
 
-const LoadingScreen = ({ onComplete, progress: externalProgress }: LoadingScreenProps) => {
+const LoadingScreen = ({
+  onComplete,
+  progress: externalProgress,
+  error: externalError,
+  onRetry,
+  timeoutMs = 30000,
+}: LoadingScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     if (externalProgress !== undefined) {
       setProgress(externalProgress);
+      if (externalProgress >= 100) setLoaded(true);
     } else {
       const interval = setInterval(() => {
         setProgress((prev) => {
@@ -34,6 +45,13 @@ const LoadingScreen = ({ onComplete, progress: externalProgress }: LoadingScreen
     }
   }, [externalProgress]);
 
+  // No infinite loader: fail visibly if loading stalls.
+  useEffect(() => {
+    if (loaded || externalError) return;
+    const timer = setTimeout(() => setTimedOut(true), timeoutMs);
+    return () => clearTimeout(timer);
+  }, [loaded, externalError, timeoutMs]);
+
   useEffect(() => {
     if (loaded && progress >= 100) {
       const timer = setTimeout(() => {
@@ -42,6 +60,8 @@ const LoadingScreen = ({ onComplete, progress: externalProgress }: LoadingScreen
       return () => clearTimeout(timer);
     }
   }, [loaded, progress, onComplete]);
+
+  const failed = externalError || timedOut;
 
   return (
     <AnimatePresence>
@@ -85,11 +105,23 @@ const LoadingScreen = ({ onComplete, progress: externalProgress }: LoadingScreen
 
             <motion.div
               className="text-sm text-secondary"
-              animate={{ opacity: [0.5, 1, 0.5] }}
+              animate={failed ? {} : { opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1, repeat: Infinity }}
             >
-              Preparing the track... {Math.round(progress)}%
+              {failed
+                ? (externalError ?? "Loading is taking too long. Check your connection and try again.")
+                : `Preparing the track... ${Math.round(progress)}%`}
             </motion.div>
+
+            {failed && (
+              <button
+                onClick={() => (onRetry ? onRetry() : window.location.reload())}
+                className="mt-6 px-6 py-2 rounded-xl font-display font-bold"
+                style={{ border: `1px solid ${COLORS.primary}`, color: COLORS.primary }}
+              >
+                RETRY
+              </button>
+            )}
 
             <motion.div
               className="mt-8 flex justify-center gap-2"

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import LoadingScreen from "@/components/screens/LoadingScreen";
 import { QualityPreset } from "@/types";
 import { useGameStore } from "@/stores/gameStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 const DynamicGameCanvas = dynamic(
   () => import("@/components/game/GameCanvas").then((mod) => mod.GameCanvas),
@@ -23,9 +24,14 @@ function RaceContent() {
 
   useEffect(() => {
     useGameStore.getState().resetRace();
+    // ?quality= link param seeds the persisted setting on first load.
+    const q = searchParams?.get("quality") as QualityPreset | null;
+    if (q === "Low" || q === "Medium" || q === "High" || q === "Ultra") {
+      useSettingsStore.getState().setQuality(q);
+    }
     const timer = setTimeout(() => setIsReady(true), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [searchParams]);
 
   if (!isReady) {
     return <LoadingScreen progress={30} />;

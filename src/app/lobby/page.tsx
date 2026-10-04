@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NeonText, GlassmorphicPanel, SparklesBackground } from "@/components/ui";
 import { RoomCreator, PlayerList, ChatBox, ReadyButton } from "@/components/lobby";
 import { COLORS } from "@/lib/constants";
 import { useLobbyStore } from "@/stores/lobbyStore";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
+import { getConnectionState, onConnectionStateChange, checkServerHealth } from "@/lib/socket";
 
 const LobbyPage = () => {
   const [mode, setMode] = useState<"create" | "join">("create");
@@ -14,6 +15,8 @@ const LobbyPage = () => {
   const { createRoom, joinRoom, leaveRoom, isConnected } = useMultiplayer();
   const [playerName, setPlayerName] = useState("Racer");
   const [joinCode, setJoinCode] = useState("");
+  const [connectionState, setConnectionState] = useState(getConnectionState());
+  const [serverHealthy, setServerHealthy] = useState(false);
 
   const handleCreateRoom = useCallback(() => {
     createRoom(playerName, settings);
@@ -26,6 +29,53 @@ const LobbyPage = () => {
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().slice(0, 6);
     setJoinCode(value);
+  };
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      const health = await checkServerHealth();
+      setServerHealthy(health.ok);
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onConnectionStateChange(setConnectionState);
+    return unsub;
+  }, []);
+
+  const getConnectionStatusText = () => {
+    switch (connectionState) {
+      case "CONNECTING":
+        return "Connecting to multiplayer server...";
+      case "CONNECTED":
+        return "Connected to multiplayer server";
+      case "RECONNECTING":
+        return "Reconnecting...";
+      case "DISCONNECTED":
+        return "Disconnected from server";
+      case "SERVER_OFFLINE":
+        return "Multiplayer server unavailable";
+      default:
+        return "Unknown connection state";
+    }
+  };
+
+  const getConnectionStatusColor = () => {
+    switch (connectionState) {
+      case "CONNECTED":
+        return COLORS.neonGreen;
+      case "CONNECTING":
+      case "RECONNECTING":
+        return COLORS.neonOrange;
+      case "DISCONNECTED":
+      case "SERVER_OFFLINE":
+        return COLORS.accent;
+      default:
+        return COLORS.textSecondary;
+    }
   };
 
   if (!roomCode) {
@@ -47,10 +97,27 @@ const LobbyPage = () => {
             <p className="text-secondary max-w-2xl mx-auto text-lg">
               Create a room to race friends, or join an existing room with a 6-character code.
             </p>
-            {!isConnected && (
-              <p className="mt-4 text-sm text-amber-300" role="status">
-                Multiplayer server unavailable. Start the game server to create or join a room.
-              </p>
+            <motion.p
+              className="mt-4 text-sm"
+              style={{ color: getConnectionStatusColor() }}
+              role="status"
+            >
+              {getConnectionStatusText()}
+              {serverHealthy ? " (server healthy)" : ""}
+            </motion.p>
+            {(connectionState === "SERVER_OFFLINE" || connectionState === "DISCONNECTED") && (
+              <div className="mt-3 flex items-center justify-center gap-3 text-sm">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="underline underline-offset-4 text-secondary hover:text-foreground"
+                >
+                  Retry
+                </button>
+                <span className="text-secondary">·</span>
+                <a href="/race?mode=single" className="underline underline-offset-4 text-secondary hover:text-foreground">
+                  Play single-player instead
+                </a>
+              </div>
             )}
           </motion.div>
 
@@ -118,17 +185,19 @@ const LobbyPage = () => {
                   <div className="mt-4">
                     <motion.button
                       onClick={handleCreateRoom}
-                      disabled={isLoading}
+                      disabled={isLoading || connectionState !== "CONNECTED"}
                       className="w-full px-6 py-3 rounded-xl font-display font-bold text-lg"
                       style={{
-                        background: `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.secondary}40)`,
-                        border: `1px solid ${COLORS.primary}`,
+                        background: connectionState === "CONNECTED"
+                          ? `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.secondary}40)`
+                          : "rgba(40, 40, 40, 0.4)",
+                        border: `1px solid ${connectionState === "CONNECTED" ? COLORS.primary : COLORS.border}`,
                         color: COLORS.textPrimary,
                       }}
-                      whileHover={{ boxShadow: `${COLORS.primary}30 0 0 20px, ${COLORS.secondary}20 0 0 30px` }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={connectionState === "CONNECTED" ? { boxShadow: `${COLORS.primary}30 0 0 20px, ${COLORS.secondary}20 0 0 30px` } : {}}
+                      whileTap={connectionState === "CONNECTED" ? { scale: 0.95 } : {}}
                     >
-                      CREATE AND START
+                      {connectionState === "CONNECTED" ? "CREATE AND START" : "WAITING FOR SERVER..."}
                     </motion.button>
                   </div>
                 </GlassmorphicPanel>
@@ -169,24 +238,27 @@ const LobbyPage = () => {
                         placeholder="______"
                         maxLength={6}
                       />
+                      <div className="mt-2 text-center text-xs text-secondary">
+                        Enter the 6-character room code
+                      </div>
                     </div>
                   </div>
 
                   <motion.button
                     onClick={handleJoinRoom}
-                    disabled={joinCode.length !== 6 || isLoading}
+                    disabled={joinCode.length !== 6 || isLoading || connectionState !== "CONNECTED"}
                     className="mt-4 w-full px-6 py-3 rounded-xl font-display font-bold text-lg transition-all"
                     style={{
-                      background: joinCode.length === 6
+                      background: joinCode.length === 6 && connectionState === "CONNECTED"
                         ? `linear-gradient(135deg, ${COLORS.secondary}40, ${COLORS.accent}40)`
                         : "rgba(40, 40, 40, 0.4)",
                       border: `1px solid ${COLORS.secondary}`,
                       color: COLORS.textPrimary,
                     }}
-                    whileHover={joinCode.length === 6 ? { boxShadow: `${COLORS.secondary}30 0 0 20px` } : {}}
-                    whileTap={joinCode.length === 6 ? { scale: 0.95 } : {}}
+                    whileHover={joinCode.length === 6 && connectionState === "CONNECTED" ? { boxShadow: `${COLORS.secondary}30 0 0 20px` } : {}}
+                    whileTap={joinCode.length === 6 && connectionState === "CONNECTED" ? { scale: 0.95 } : {}}
                   >
-                    JOIN RACE
+                    {connectionState === "CONNECTED" ? "JOIN RACE" : "WAITING FOR SERVER..."}
                   </motion.button>
                 </GlassmorphicPanel>
               </motion.div>

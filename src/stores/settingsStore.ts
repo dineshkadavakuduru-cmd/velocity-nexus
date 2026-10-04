@@ -15,7 +15,6 @@ interface SettingsState {
   showFPS: boolean;
   showHUD: boolean;
   vsync: boolean;
-  motionBlur: boolean;
   postProcessing: boolean;
   shadows: boolean;
 
@@ -29,7 +28,6 @@ interface SettingsState {
   setShowFPS: (show: boolean) => void;
   setShowHUD: (show: boolean) => void;
   setVsyn: (vsync: boolean) => void;
-  setMotionBlur: (enabled: boolean) => void;
   setPostProcessing: (enabled: boolean) => void;
   setShadows: (enabled: boolean) => void;
 }
@@ -48,7 +46,6 @@ export const useSettingsStore = create<SettingsState>()(
         showFPS: false,
         showHUD: true,
         vsync: true,
-        motionBlur: true,
         postProcessing: true,
         shadows: true,
 
@@ -62,7 +59,6 @@ export const useSettingsStore = create<SettingsState>()(
         setShowFPS: (show) => set({ showFPS: show }),
         setShowHUD: (show) => set({ showHUD: show }),
         setVsyn: (vsync) => set({ vsync }),
-        setMotionBlur: (enabled) => set({ motionBlur: enabled }),
         setPostProcessing: (enabled) => set({ postProcessing: enabled }),
         setShadows: (enabled) => set({ shadows: enabled }),
       }),

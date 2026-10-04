@@ -1,4 +1,5 @@
 ﻿import { Controls, DEFAULT_CONTROLS } from "@/lib/constants";
+import { touchInput } from "@/lib/touch";
 
 type KeyState = Record<string, boolean>;
 type GamepadState = Gamepad | null;
@@ -45,8 +46,18 @@ export const getControls = (): Controls => controls;
 
 const keyHandlers = new Map<string, () => void>();
 
+let controlsInitialized = false;
+
+const clearAllKeys = (): void => {
+  Object.keys(inputState.keys).forEach((k) => {
+    inputState.keys[k] = false;
+  });
+  resetInput();
+};
+
 export const initControls = (): void => {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || controlsInitialized) return;
+  controlsInitialized = true;
 
   window.addEventListener("keydown", (e) => {
     inputState.keys[e.code] = true;
@@ -59,11 +70,11 @@ export const initControls = (): void => {
     inputState.keys[e.code] = false;
   });
 
-  window.addEventListener("blur", () => {
-    Object.keys(inputState.keys).forEach((k) => {
-      inputState.keys[k] = false;
-    });
-    resetInput();
+  // Stuck-key safety: any focus loss clears every held input so the car
+  // never keeps accelerating/steering after Alt-Tab or window blur.
+  window.addEventListener("blur", clearAllKeys);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) clearAllKeys();
   });
 
   window.addEventListener("gamepadconnected", (e) => {
@@ -97,12 +108,12 @@ const resetInput = (): void => {
 };
 
 export const getInputState = (): InputState => {
-  inputState.forward = !!inputState.keys[controls.forward];
-  inputState.backward = !!inputState.keys[controls.backward];
-  inputState.left = !!inputState.keys[controls.left];
-  inputState.right = !!inputState.keys[controls.right];
-  inputState.handbrake = !!inputState.keys[controls.handbrake];
-  inputState.nitro = !!inputState.keys[controls.nitro];
+  inputState.forward = !!inputState.keys[controls.forward] || touchInput.forward;
+  inputState.backward = !!inputState.keys[controls.backward] || touchInput.backward;
+  inputState.left = !!inputState.keys[controls.left] || touchInput.left;
+  inputState.right = !!inputState.keys[controls.right] || touchInput.right;
+  inputState.handbrake = !!inputState.keys[controls.handbrake] || touchInput.handbrake;
+  inputState.nitro = !!inputState.keys[controls.nitro] || touchInput.nitro;
   inputState.camera = !!inputState.keys[controls.camera];
   inputState.pause = !!inputState.keys[controls.pause];
 

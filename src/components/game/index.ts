@@ -8,5 +8,7 @@ export { default as TrailEffect } from "./TrailEffect";
 export { WeatherSystem, SkyEnvironment } from "./WeatherSystem";
 export { default as OpponentVehicle } from "./OpponentVehicle";
 export { default as AIVehicle } from "./AIVehicle";
+export { default as TouchControls } from "./TouchControls";
+export { default as QualityPanel } from "./QualityPanel";
 export { GameCanvas } from "./GameCanvas";
 export type { GameCanvasProps } from "./GameCanvas";

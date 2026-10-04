@@ -6,11 +6,13 @@ import { QualityPreset } from "@/types";
 
 interface PostProcessingProps {
   enabled?: boolean;
+  bloom?: boolean;
   quality?: QualityPreset;
 }
 
 export const PostProcessing = ({
   enabled = true,
+  bloom = true,
   quality = "High",
 }: PostProcessingProps) => {
   const speedKmh = useGameStore((s) => s.speedKmh);
@@ -23,13 +25,15 @@ export const PostProcessing = ({
     <EffectComposer>
       <ToneMapping />
 
-      <Bloom
-        luminanceThreshold={0.2}
-        luminanceSmoothing={0.9}
-        intensity={0.6 + speedFactor * 0.4}
-        mipmapBlur={quality !== "Low"}
-        radius={quality === "Ultra" ? 1.0 : 0.8}
-      />
+      {bloom && (
+        <Bloom
+          luminanceThreshold={0.2}
+          luminanceSmoothing={0.9}
+          intensity={0.6 + speedFactor * 0.4}
+          mipmapBlur={quality !== "Low"}
+          radius={quality === "Ultra" ? 1.0 : 0.8}
+        />
+      )}
 
       {quality !== "Low" && <Noise opacity={0.02} premultiply={true} />}
 
