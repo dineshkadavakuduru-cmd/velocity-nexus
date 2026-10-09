@@ -49,11 +49,37 @@ Web (Vercel, automatic on push to `main`) + socket server (separate host)
 is the only supported topology — Vercel cannot hold the persistent
 Socket.IO process in `server/`.
 
-1. Deploy `server/` via `Dockerfile` (Railway / Render / Fly):
-   production runs `node dist/index.js`, binds `$PORT`, exposes `/health`.
-2. Set server env: `ALLOWED_ORIGINS=https://gt-umber-alpha.vercel.app`
-   (comma-separated; never `*` in production).
-3. Set Vercel web env: `NEXT_PUBLIC_SOCKET_URL=https://<your-server-host>`.
+### Option A: Render (one-click blueprint)
+
+1. Push this repo to GitHub, then in Render: **New → Blueprint**,
+   point it at the repo. `render.yaml` builds `Dockerfile` and sets
+   `ALLOWED_ORIGINS=https://gt-umber-alpha.vercel.app` for you.
+2. After deploy, copy the service URL
+   (e.g. `https://velocity-nexus-server.onrender.com`) and verify
+   `GET <url>/health` returns `{"ok":true,…}`.
+   Note: Render free web services sleep when idle — the first lobby visit
+   after idle takes ~30–60s to wake (lobby shows RECONNECTING meanwhile).
+
+### Option B: Railway (Dockerfile)
+
+1. Railway: **New Project → Deploy from GitHub repo**,
+   select this repo. The root `Dockerfile` builds `server/` only
+   (`railway.json` pins the Dockerfile builder + `/health` check).
+2. Set service variable
+   `ALLOWED_ORIGINS=https://gt-umber-alpha.vercel.app`,
+   then **Generate Domain** under service Settings → Networking.
+3. Verify `GET https://<your-domain>/health` returns `{"ok":true,…}`.
+
+### Wire the web app (both options)
+
+```powershell
+vercel env add NEXT_PUBLIC_SOCKET_URL production
+# paste: https://<your-server-host>  (no trailing slash)
+git push origin main   # Vercel rebuilds; /lobby flips to CONNECTED
+```
+
+Local dev is unchanged: `NEXT_PUBLIC_SOCKET_URL=http://localhost:3001`
+in `.env.local` + `npm run server:dev`.
 
 ## Scripts
 

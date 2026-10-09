@@ -1,0 +1,11 @@
+services:
+  # Velocity Nexus realtime server (Socket.IO). Vercel cannot host this:
+  # serverless functions can't hold persistent WebSocket connections.
+  - type: web
+    name: velocity-nexus-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ALLOWED_ORIGINS
+        value: https://gt-umber-alpha.vercel.app

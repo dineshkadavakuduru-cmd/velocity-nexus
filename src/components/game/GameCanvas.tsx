@@ -23,6 +23,7 @@ import {
 } from "@/components/ui";
 import { useGameStore } from "@/stores/gameStore";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
+import { initAudio } from "@/lib/audio";
 import { useGameLoop, useCountdown, useRaceTimer } from "@/hooks/useGameLoop";
 import { CAR_CONFIGS, TRACK_CONFIGS, COLORS } from "@/lib/constants";
 import { PlayerState, QualityPreset } from "@/types";
@@ -195,6 +196,9 @@ export const GameCanvas = ({
 
   useEffect(() => {
     setWebGLok(isWebGLAvailable());
+    // Without this, Howler never loads any buffer and every playOneShot
+    // (countdown beeps, race start, victory…) is a silent no-op.
+    initAudio().catch((err) => console.warn("Audio init failed (non-fatal):", err));
   }, []);
 
   // Camera: C cycles chase -> cockpit -> cinematic. Pause: Escape toggles.

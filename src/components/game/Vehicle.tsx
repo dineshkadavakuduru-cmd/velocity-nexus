@@ -9,6 +9,7 @@ import { CAR_CONFIGS } from "@/lib/constants";
 import { useParticles } from "@/hooks/useParticles";
 import { touchInput, resetTouchInput } from "@/lib/touch";
 import { getEngineRpm, getOptimalGear, getDamageMultiplier } from "@/lib/physics";
+import { updateEngineSound } from "@/lib/audio";
 import { VehicleConfig, Vector3 } from "@/types";
 import * as THREE from "three";
 
@@ -49,6 +50,7 @@ export const Vehicle = ({
   const driftAngleRef = useRef(0);
   const nitroLevelRef = useRef(100);
   const driftScoreRef = useRef(0);
+  const lastEngineSoundRef = useRef(0);
   const damageRef = useRef({ front: 0, rear: 0, left: 0, right: 0 });
   const visibleGearRef = useRef(1);
 
@@ -222,6 +224,13 @@ export const Vehicle = ({
       speedKmh, rpm, visibleGear, throttleInput, steerAngle, brakeInput, handbrakeInput, nitroInput
     );
     useGameStore.getState().setNitroLevel(nitroLevelRef.current);
+
+    // Layered engine SFX that respond to rpm/gear/throttle (throttled to ~10Hz).
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (nowMs - lastEngineSoundRef.current > 100) {
+      lastEngineSoundRef.current = nowMs;
+      updateEngineSound(rpm, visibleGear, Math.max(throttleInput, nitroInput ? 1 : 0));
+    }
 
     const posArr = ref.current.position.toArray();
     useGameStore.getState().setPlayerState(useGameStore.getState().localPlayerId, {
