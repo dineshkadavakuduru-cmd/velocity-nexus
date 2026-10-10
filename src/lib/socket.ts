@@ -12,6 +12,23 @@ export const getSocketUrl = (): string | null => {
   return url.trim();
 };
 
+/**
+ * Stable per-browser identity. Kept for the lifetime of the page so that a
+ * reconnected socket can present it and reclaim its held player slot instead
+ * of appearing as a duplicate. Not used for anything else.
+ */
+let clientId: string | null = null;
+export const getClientId = (): string => {
+  if (clientId) return clientId;
+  const fallback = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  try {
+    clientId = globalThis.crypto?.randomUUID?.() ?? fallback;
+  } catch {
+    clientId = fallback;
+  }
+  return clientId;
+};
+
 export const hasSocketUrl = (): boolean => getSocketUrl() !== null;
 
 const setConnectionState = (state: ConnectionState) => {

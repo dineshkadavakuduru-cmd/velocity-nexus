@@ -20,7 +20,12 @@ export const generateRoomCode = (): string => {
   return code;
 };
 
-export const createRoom = (settings: RaceSettings, hostSocketId: string, hostName: string): Room => {
+export const createRoom = (
+  settings: RaceSettings,
+  hostSocketId: string,
+  hostName: string,
+  hostClientId = "",
+): Room => {
   let roomCode: string;
   do {
     roomCode = generateRoomCode();
@@ -42,6 +47,7 @@ export const createRoom = (settings: RaceSettings, hostSocketId: string, hostNam
 
   const host: PlayerState = {
     id: hostSocketId,
+    clientId: hostClientId,
     name: hostName,
     position: { x: 0, y: 1, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },

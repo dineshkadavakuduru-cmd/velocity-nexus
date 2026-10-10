@@ -16,6 +16,7 @@ import {
   clampPlayerUpdate,
   isPlausibleMovement,
   sanitizeChatMessage,
+  sanitizeClientId,
   sanitizePlayerName,
   sanitizeRaceSettings,
   validateRoomCode,
@@ -58,14 +59,15 @@ export const setupSocketServer = (io: Server) => {
   io.on("connection", (socket: Socket) => {
     log(socket.id, undefined, "connected");
 
-    socket.on("create_room", (data: { settings?: unknown; playerName?: unknown }) => {
+    socket.on("create_room", (data: { settings?: unknown; playerName?: unknown; clientId?: unknown }) => {
       const settings = sanitizeRaceSettings(data?.settings);
       const name = sanitizePlayerName(data?.playerName);
+      const clientId = sanitizeClientId(data?.clientId);
       if (playerRooms.has(socket.id)) {
         socket.emit("error", "Already in a room");
         return;
       }
-      const room = createRoom(settings, socket.id, name);
+      const room = createRoom(settings, socket.id, name, clientId);
       socket.join(room.roomCode);
       log(socket.id, room.roomCode, `room created by "${name}"`);
       socket.emit("room_created", {
@@ -73,10 +75,11 @@ export const setupSocketServer = (io: Server) => {
         players: Array.from(room.players.values()),
         settings: room.settings,
         isHost: true,
+        playerId: socket.id,
       });
     });
 
-    socket.on("join_room", (data: { roomCode?: unknown; playerName?: unknown }) => {
+    socket.on("join_room", (data: { roomCode?: unknown; playerName?: unknown; clientId?: unknown }) => {
       const code = validateRoomCode(data?.roomCode);
       if (!code) {
         socket.emit("error", "Invalid room code");
@@ -87,6 +90,42 @@ export const setupSocketServer = (io: Server) => {
         socket.emit("error", "Room not found");
         return;
       }
+      const clientId = sanitizeClientId(data?.clientId);
+
+      // Reconnect: a socket presenting the same clientId reclaims the slot
+      // held for it during the disconnect grace window instead of spawning a
+      // duplicate ghost. Does not consume extra capacity and works even after
+      // the race has started.
+      if (clientId) {
+        for (const [existingId, existing] of room.players) {
+          if (existing.clientId !== clientId) continue;
+          if (existing.isConnected && existingId !== socket.id) {
+            socket.emit("error", "Already connected from another session");
+            return;
+          }
+          room.players.delete(existingId);
+          if (playerRooms.get(existingId) === code) playerRooms.delete(existingId);
+          if (room.hostId === existingId) room.hostId = socket.id;
+          existing.id = socket.id;
+          existing.isConnected = true;
+          existing.lastUpdateAt = Date.now();
+          room.players.set(socket.id, existing);
+          playerRooms.set(socket.id, code);
+          socket.join(code);
+          log(socket.id, code, `rejoined as "${existing.name}"`);
+          socket.emit("joined_room", {
+            success: true,
+            roomCode: room.roomCode,
+            players: Array.from(room.players.values()),
+            settings: room.settings,
+            isHost: room.hostId === socket.id,
+            playerId: socket.id,
+          });
+          emitRoomUpdate(io, code);
+          return;
+        }
+      }
+
       if (room.players.size >= room.settings.maxPlayers) {
         socket.emit("error", "Room is full");
         return;
@@ -100,6 +139,7 @@ export const setupSocketServer = (io: Server) => {
       playerRooms.set(socket.id, code);
       const player: PlayerState = {
         id: socket.id,
+        clientId,
         name,
         position: { x: 0, y: 1, z: 0 },
         rotation: { x: 0, y: 0, z: 0, w: 1 },

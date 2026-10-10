@@ -10,6 +10,7 @@ import {
   connectSocket,
   disconnectSocket as destroySocket,
   emitWithResponse,
+  getClientId,
   getConnectionState,
   hasSocketUrl,
   initSocket,
@@ -31,6 +32,7 @@ export const useMultiplayer = () => {
   const lobbyHost = useLobbyStore((s) => s.isHost);
 
   const listenersBoundRef = useRef(false);
+  const hasConnectedRef = useRef(false);
   const lastUpdateSentRef = useRef(0);
 
   const bindListeners = useCallback((s: Socket) => {
@@ -40,9 +42,21 @@ export const useMultiplayer = () => {
     const game = useGameStore.getState;
 
     s.on("connect", () => {
-      lobby().setIsConnected(true);
-      lobby().setIsLoading(false);
-      lobby().setError(null);
+      const ls = lobby();
+      ls.setIsConnected(true);
+      ls.setIsLoading(false);
+      if (hasConnectedRef.current && ls.roomCode) {
+        // Socket reconnected while in a room: reclaim the held slot using the
+        // same client identity so it is not duplicated as a new player.
+        s.emit("join_room", {
+          roomCode: ls.roomCode,
+          playerName: ls.playerName || "Racer",
+          clientId: getClientId(),
+        });
+      } else {
+        ls.setError(null);
+      }
+      hasConnectedRef.current = true;
     });
 
     s.on("disconnect", () => {
@@ -59,6 +73,27 @@ export const useMultiplayer = () => {
       lobby().setPlayers(data.players);
       lobby().setSettings(data.settings);
       data.players.forEach((p) => setPlayerStateSnapshot(p.id, p));
+    });
+
+    s.on("joined_room", (data: {
+      success: boolean;
+      roomCode: string;
+      players: PlayerState[];
+      settings: RaceSettings;
+      isHost: boolean;
+      playerId: string;
+    }) => {
+      // Fires for a normal join and for a reconnect-driven rejoin; idempotent.
+      const ls = lobby();
+      const gs = game();
+      ls.setRoomCode(data.roomCode);
+      ls.setPlayers(data.players);
+      ls.setSettings(data.settings);
+      ls.setIsHost(data.isHost);
+      ls.setIsLoading(false);
+      gs.setLocalPlayerId(data.playerId);
+      const me = data.players.find((p) => p.id === data.playerId);
+      if (me) gs.addPlayer(me);
     });
 
     s.on("player_joined", (player: PlayerState) => {
@@ -176,14 +211,15 @@ export const useMultiplayer = () => {
     lobby.setIsLoading(true);
     lobby.setError(null);
     try {
+      lobby.setPlayerName(playerName);
       const data = await emitWithResponse<{
-        roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean;
-      }>("create_room", { settings: raceSettings, playerName }, "room_created");
+        roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string;
+      }>("create_room", { settings: raceSettings, playerName, clientId: getClientId() }, "room_created");
       lobby.setRoomCode(data.roomCode);
       lobby.setPlayers(data.players);
       lobby.setSettings(data.settings);
       lobby.setIsHost(true);
-      const me = data.players.find((p) => p.name === playerName) ?? data.players[0];
+      const me = data.players.find((p) => p.id === data.playerId) ?? data.players[0];
       if (me) {
         game.setLocalPlayerId(me.id);
         game.addPlayer(me);
@@ -210,9 +246,10 @@ export const useMultiplayer = () => {
     lobby.setIsLoading(true);
     lobby.setError(null);
     try {
+      lobby.setPlayerName(playerName);
       const data = await emitWithResponse<{
         success: boolean; roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string;
-      }>("join_room", { roomCode: code.toUpperCase(), playerName }, "joined_room");
+      }>("join_room", { roomCode: code.toUpperCase(), playerName, clientId: getClientId() }, "joined_room");
       if (!data.success) throw new Error("Failed to join room");
       lobby.setRoomCode(data.roomCode);
       lobby.setPlayers(data.players);

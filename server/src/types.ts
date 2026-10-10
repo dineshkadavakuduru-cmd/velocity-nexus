@@ -1,5 +1,7 @@
 export type PlayerState = {
   id: string;
+  /** Stable per-browser identity so a reconnect can reclaim its held slot. */
+  clientId: string;
   name: string;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number; w: number };
@@ -65,8 +67,8 @@ export type GameState = {
 };
 
 export type SocketEvents = {
-  create_room: (data: { settings: RaceSettings; playerName?: string }) => void;
-  join_room: (data: { roomCode: string; playerName: string }) => void;
+  create_room: (data: { settings: RaceSettings; playerName?: string; clientId?: string }) => void;
+  join_room: (data: { roomCode: string; playerName: string; clientId?: string }) => void;
   leave_room: () => void;
   ready_state: (data: { roomCode: string; isReady: boolean }) => void;
   start_race: (data: { roomCode: string }) => void;
@@ -76,7 +78,7 @@ export type SocketEvents = {
   race_start: (data: { startTime: number }) => void;
   game_state: (data: GameState) => void;
   race_finish: (data: { results: Array<{ id: string; name: string; finishTime: number; position: number }> }) => void;
-  room_created: (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean }) => void;
+  room_created: (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId?: string }) => void;
   joined_room: (data: { success: boolean; roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string }) => void;
   room_update: (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; isHost: boolean }) => void;
   player_joined: (player: PlayerState) => void;

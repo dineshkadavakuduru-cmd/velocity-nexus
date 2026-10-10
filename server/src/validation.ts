@@ -1,6 +1,7 @@
 import type { PlayerUpdate, RaceSettings } from "./types";
 
 export const MAX_PLAYER_NAME_LENGTH = 20;
+export const MAX_CLIENT_ID_LENGTH = 64;
 export const MAX_CHAT_MESSAGE_LENGTH = 200;
 export const MAX_POSITION_ABS = 10000;
 export const MAX_VELOCITY_ABS = 500;
@@ -15,6 +16,12 @@ export const sanitizePlayerName = (raw: unknown): string => {
   if (typeof raw !== "string") return "Player";
   const cleaned = raw.replace(/<[^>]*>/g, "").replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, MAX_PLAYER_NAME_LENGTH);
   return cleaned.length > 0 ? cleaned : "Player";
+};
+
+/** Opaque per-client identity token used to re-associate reconnects. */
+export const sanitizeClientId = (raw: unknown): string => {
+  if (typeof raw !== "string") return "";
+  return raw.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, MAX_CLIENT_ID_LENGTH);
 };
 
 export const validateRoomCode = (raw: unknown): string | null => {

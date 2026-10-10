@@ -13,6 +13,7 @@ export type ChatMessage = {
 
 interface LobbyState {
   roomCode: string | null;
+  playerName: string;
   players: PlayerState[];
   settings: RaceSettings;
   isHost: boolean;
@@ -23,6 +24,7 @@ interface LobbyState {
   messages: ChatMessage[];
 
   setRoomCode: (code: string) => void;
+  setPlayerName: (name: string) => void;
   setPlayers: (players: PlayerState[]) => void;
   addPlayer: (player: PlayerState) => void;
   removePlayer: (playerId: string) => void;
@@ -43,6 +45,7 @@ let chatSeq = 0;
 export const useLobbyStore = create<LobbyState>()(
   devtools((set) => ({
     roomCode: null,
+    playerName: "",
     players: [],
     settings: { ...DEFAULT_RACE_SETTINGS },
     isHost: false,
@@ -53,6 +56,8 @@ export const useLobbyStore = create<LobbyState>()(
     messages: [],
 
     setRoomCode: (code) => set({ roomCode: code }),
+
+    setPlayerName: (name) => set({ playerName: name }),
 
     setPlayers: (players) => set({ players }),
 
@@ -101,6 +106,7 @@ export const useLobbyStore = create<LobbyState>()(
     resetLobby: () =>
       set({
         roomCode: null,
+        playerName: "",
         players: [],
         settings: { ...DEFAULT_RACE_SETTINGS },
         isHost: false,

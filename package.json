@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "assets:check": "node scripts/check-assets.cjs",
     "test:smoke": "npx tsx scripts/smoke.ts",
+    "test:mp": "npm run server:build && npx tsx scripts/mp-integration.ts",
     "sounds:generate": "node scripts/generate-sounds.cjs",
     "server:dev": "cd server && npx tsx watch src/index.ts",
     "server:build": "cd server && npm run build",
