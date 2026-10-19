@@ -96,6 +96,8 @@ async function main() {
   // Run the compiled server in-process so there is no orphaned child to manage.
   process.env.PORT = String(PORT);
   process.env.ALLOWED_ORIGINS = "*";
+  // Short grace window so reconnect/expiry behaviour is testable in seconds.
+  process.env.DISCONNECT_GRACE_MS = "3000";
   await import(pathToFileURL(path.join(__dirname, "..", "server", "dist", "index.js")).href);
 
   const health = await waitForServer();
@@ -249,6 +251,141 @@ async function main() {
       assert.strictEqual(back.playerId, reGuest2.id));
     reHost.close();
     reGuest2.close();
+  }
+
+  // --- grace-window timer cleanup: quick reconnect cancels the removal ---
+  {
+    const gHost = connect();
+    await nextEvent(gHost, "connect");
+    const gRoom = await withTimeout(
+      new Promise<RoomCreated>((resolve) => {
+        gHost.once("room_created", resolve);
+        gHost.emit("create_room", { settings: { maxPlayers: 8 }, playerName: "GHost", clientId: "grace-host" });
+      }),
+      6000,
+      "gHost create_room",
+    );
+    const g1 = connect();
+    await nextEvent(g1, "connect");
+    const g1Join = nextEvent<JoinedRoom>(g1, "joined_room");
+    g1.emit("join_room", { roomCode: gRoom.roomCode, playerName: "GGuest", clientId: "grace-1" });
+    const g1Id = (await g1Join).playerId;
+
+    let gHostSawRemoval = false;
+    let gLatestPlayerCount = 0;
+    const noteRemoval = (d: { playerId: string }) => {
+      if (d.playerId === g1Id) gHostSawRemoval = true;
+    };
+    const noteRoom = (d: RoomUpdate) => {
+      gLatestPlayerCount = d.players.length;
+    };
+    gHost.on("player_left", noteRemoval);
+    gHost.on("room_update", noteRoom);
+
+    g1.close(); // drop within the 3s grace window
+    await new Promise((r) => setTimeout(r, 400));
+    const g2 = connect();
+    await nextEvent(g2, "connect");
+    const g2Join = nextEvent<JoinedRoom>(g2, "joined_room");
+    g2.emit("join_room", { roomCode: gRoom.roomCode, playerName: "GGuest", clientId: "grace-1" });
+    const rejoined = await g2Join;
+    ok("reconnect within the window reclaims the same slot", () =>
+      assert.strictEqual(rejoined.players.length, 2));
+
+    // Wait past the original grace deadline; the stale timer must not fire.
+    await new Promise((r) => setTimeout(r, 3200));
+    ok("reconnect cancels the grace timer (no late removal)", () => assert.strictEqual(gHostSawRemoval, false));
+    ok("player survives reconnect past the grace window", () => assert.strictEqual(gLatestPlayerCount, 2));
+
+    gHost.off("player_left", noteRemoval);
+    gHost.off("room_update", noteRoom);
+    gHost.close();
+    g2.close();
+  }
+
+  // --- grace expiry removes the slot (no ghost car) ---
+  {
+    const eHost = connect();
+    await nextEvent(eHost, "connect");
+    const eRoom = await withTimeout(
+      new Promise<RoomCreated>((resolve) => {
+        eHost.once("room_created", resolve);
+        eHost.emit("create_room", { settings: { maxPlayers: 8 }, playerName: "EHost", clientId: "expire-host" });
+      }),
+      6000,
+      "eHost create_room",
+    );
+    const eGuest = connect();
+    await nextEvent(eGuest, "connect");
+    const eJoin = nextEvent<JoinedRoom>(eGuest, "joined_room");
+    eGuest.emit("join_room", { roomCode: eRoom.roomCode, playerName: "EGuest", clientId: "expire-1" });
+    const eGuestId = (await eJoin).playerId;
+
+    const expirySeen = waitForEvent<{ playerId: string }>(
+      eHost,
+      "player_left",
+      (d) => d.playerId === eGuestId,
+      8000,
+    );
+    eGuest.close();
+    await expirySeen;
+    ok("disconnect past the grace window removes the player (no ghost)", () => assert.ok(true));
+    eHost.close();
+  }
+
+  // --- host migration when the host drops ---
+  {
+    const hA = connect();
+    await nextEvent(hA, "connect");
+    const hRoom = await withTimeout(
+      new Promise<RoomCreated>((resolve) => {
+        hA.once("room_created", resolve);
+        hA.emit("create_room", { settings: { maxPlayers: 8 }, playerName: "HostA", clientId: "hm-a" });
+      }),
+      6000,
+      "hA create_room",
+    );
+    const hB = connect();
+    await nextEvent(hB, "connect");
+    const hBJoin = nextEvent<JoinedRoom>(hB, "joined_room");
+    hB.emit("join_room", { roomCode: hRoom.roomCode, playerName: "HostB", clientId: "hm-b" });
+    await hBJoin;
+
+    const promoted = waitForEvent<{ hostId: string }>(
+      hB,
+      "host_changed",
+      (d) => d.hostId === hB.id,
+      8000,
+    );
+    hA.close();
+    await promoted;
+    ok("host migration promotes the next connected player", () => assert.ok(true));
+    hB.close();
+  }
+
+  // --- two tabs presenting the same clientId ---
+  {
+    const tA = connect();
+    await nextEvent(tA, "connect");
+    const tRoom = await withTimeout(
+      new Promise<RoomCreated>((resolve) => {
+        tA.once("room_created", resolve);
+        tA.emit("create_room", { settings: { maxPlayers: 8 }, playerName: "TabA", clientId: "same-tab" });
+      }),
+      6000,
+      "tA create_room",
+    );
+
+    // A different socket presenting the already-connected clientId must be
+    // rejected rather than spawning a duplicate player/ghost.
+    const tB = connect();
+    await nextEvent(tB, "connect");
+    tB.emit("join_room", { roomCode: tRoom.roomCode, playerName: "TabB", clientId: "same-tab" });
+    const msg = await nextEvent<string>(tB, "error");
+    ok("a second live socket with the same clientId is rejected (no duplicate ghost)", () =>
+      assert.match(msg, /Already connected from another session/));
+    tA.close();
+    tB.close();
   }
 
   console.log(`\n${passed} multiplayer integration assertions passed.`);

@@ -4,12 +4,15 @@ import {
   DISCONNECT_GRACE_MS,
   broadcastGameState,
   calculateRaceResults,
+  clearGraceTimer,
   createRoom,
   destroyRoom,
+  forgetGraceTimer,
   playerRooms,
   removePlayerFromRoom,
   rooms,
   schedulePostRaceCleanup,
+  setGraceTimer,
   startCountdown,
 } from "./rooms";
 import {
@@ -22,24 +25,46 @@ import {
   validateRoomCode,
 } from "./validation";
 
-/** Sliding-window per-socket rate limiter. */
+/** Sliding-window per-socket rate limiter with explicit cleanup. */
 const makeRateLimiter = (maxEvents: number, windowMs: number) => {
   const stamps = new Map<string, number[]>();
-  return (socketId: string): boolean => {
-    const now = Date.now();
-    const arr = (stamps.get(socketId) ?? []).filter((t) => now - t < windowMs);
-    if (arr.length >= maxEvents) {
+  return {
+    allow: (socketId: string): boolean => {
+      const now = Date.now();
+      const arr = (stamps.get(socketId) ?? []).filter((t) => now - t < windowMs);
+      if (arr.length >= maxEvents) {
+        stamps.set(socketId, arr);
+        return false;
+      }
+      arr.push(now);
       stamps.set(socketId, arr);
-      return false;
-    }
-    arr.push(now);
-    stamps.set(socketId, arr);
-    return true;
+      return true;
+    },
+    /** Drop a socket's history so the map never grows without bound. */
+    clear: (socketId: string): void => {
+      stamps.delete(socketId);
+    },
   };
 };
 
-const allowPlayerUpdate = makeRateLimiter(90, 1000);
-const allowChat = makeRateLimiter(2, 1000);
+const playerUpdateLimiter = makeRateLimiter(90, 1000);
+const chatLimiter = makeRateLimiter(2, 1000);
+/** Guard room creation/join-churn and room-code enumeration. */
+const roomActionLimiter = makeRateLimiter(10, 10000);
+/** Guard ready toggles / race starts. */
+const raceActionLimiter = makeRateLimiter(10, 1000);
+
+const allowPlayerUpdate = (id: string) => playerUpdateLimiter.allow(id);
+const allowChat = (id: string) => chatLimiter.allow(id);
+const allowRoomAction = (id: string) => roomActionLimiter.allow(id);
+const allowRaceAction = (id: string) => raceActionLimiter.allow(id);
+
+const clearSocketState = (socketId: string) => {
+  playerUpdateLimiter.clear(socketId);
+  chatLimiter.clear(socketId);
+  roomActionLimiter.clear(socketId);
+  raceActionLimiter.clear(socketId);
+};
 
 const log = (socketId: string, roomCode: string | undefined, msg: string) => {
   console.log(`[socket=${socketId}]${roomCode ? `[room=${roomCode}]` : ""} ${msg}`);
@@ -52,6 +77,7 @@ const emitRoomUpdate = (io: Server, roomCode: string) => {
     players: Array.from(room.players.values()),
     settings: room.settings,
     roomCode: room.roomCode,
+    hostId: room.hostId,
   });
 };
 
@@ -60,6 +86,10 @@ export const setupSocketServer = (io: Server) => {
     log(socket.id, undefined, "connected");
 
     socket.on("create_room", (data: { settings?: unknown; playerName?: unknown; clientId?: unknown }) => {
+      if (!allowRoomAction(socket.id)) {
+        socket.emit("error", "Too many room actions, slow down");
+        return;
+      }
       const settings = sanitizeRaceSettings(data?.settings);
       const name = sanitizePlayerName(data?.playerName);
       const clientId = sanitizeClientId(data?.clientId);
@@ -80,6 +110,10 @@ export const setupSocketServer = (io: Server) => {
     });
 
     socket.on("join_room", (data: { roomCode?: unknown; playerName?: unknown; clientId?: unknown }) => {
+      if (!allowRoomAction(socket.id)) {
+        socket.emit("error", "Too many room actions, slow down");
+        return;
+      }
       const code = validateRoomCode(data?.roomCode);
       if (!code) {
         socket.emit("error", "Invalid room code");
@@ -103,6 +137,8 @@ export const setupSocketServer = (io: Server) => {
             socket.emit("error", "Already connected from another session");
             return;
           }
+          // Cancel the pending grace-window removal for the disconnected slot.
+          clearGraceTimer(existingId);
           room.players.delete(existingId);
           if (playerRooms.get(existingId) === code) playerRooms.delete(existingId);
           if (room.hostId === existingId) room.hostId = socket.id;
@@ -120,6 +156,8 @@ export const setupSocketServer = (io: Server) => {
             settings: room.settings,
             isHost: room.hostId === socket.id,
             playerId: socket.id,
+            hostId: room.hostId,
+            status: room.status,
           });
           emitRoomUpdate(io, code);
           return;
@@ -168,6 +206,8 @@ export const setupSocketServer = (io: Server) => {
         settings: room.settings,
         isHost: false,
         playerId: socket.id,
+        hostId: room.hostId,
+        status: room.status,
       });
       socket.to(code).emit("player_joined", player);
     });
@@ -175,12 +215,14 @@ export const setupSocketServer = (io: Server) => {
     socket.on("leave_room", () => {
       const roomCode = playerRooms.get(socket.id);
       if (!roomCode) return;
+      clearGraceTimer(socket.id);
       socket.leave(roomCode);
       log(socket.id, roomCode, "left room");
       removePlayerFromRoom(io, roomCode, socket.id);
     });
 
     socket.on("ready_state", (data: { roomCode?: unknown; isReady?: unknown }) => {
+      if (!allowRaceAction(socket.id)) return;
       const roomCode = validateRoomCode(data?.roomCode) ?? playerRooms.get(socket.id);
       if (!roomCode) return;
       const room = rooms.get(roomCode);
@@ -196,6 +238,7 @@ export const setupSocketServer = (io: Server) => {
     });
 
     socket.on("start_race", (data: { roomCode?: unknown }) => {
+      if (!allowRaceAction(socket.id)) return;
       const roomCode = validateRoomCode(data?.roomCode) ?? playerRooms.get(socket.id);
       if (!roomCode) return;
       const room = rooms.get(roomCode);
@@ -271,7 +314,14 @@ export const setupSocketServer = (io: Server) => {
       });
     });
 
+    // Latency probe: client emits "ping" and we ack immediately so it can
+    // measure round-trip time without a full reconnect cycle.
+    socket.on("ping", (ack?: (payload: { t: number }) => void) => {
+      if (typeof ack === "function") ack({ t: Date.now() });
+    });
+
     socket.on("disconnect", () => {
+      clearSocketState(socket.id);
       log(socket.id, playerRooms.get(socket.id), "disconnected");
       const roomCode = playerRooms.get(socket.id);
       if (!roomCode) return;
@@ -287,15 +337,21 @@ export const setupSocketServer = (io: Server) => {
         emitRoomUpdate(io, roomCode);
       }
       // Grace period: keep slot + mapping so a quick reconnect can rejoin.
-      setTimeout(() => {
-        const current = rooms.get(roomCode);
-        if (!current) return;
-        const p = current.players.get(socket.id);
-        if (p && !p.isConnected) {
-          log(socket.id, roomCode, "disconnect grace expired, removing");
-          removePlayerFromRoom(io, roomCode, socket.id);
-        }
-      }, DISCONNECT_GRACE_MS);
+      // The timer is tracked so a rejoin (or room teardown) cancels it — no
+      // dangling timeout, no late removal of a live player.
+      setGraceTimer(
+        socket.id,
+        setTimeout(() => {
+          forgetGraceTimer(socket.id);
+          const current = rooms.get(roomCode);
+          if (!current) return;
+          const p = current.players.get(socket.id);
+          if (p && !p.isConnected) {
+            log(socket.id, roomCode, "disconnect grace expired, removing");
+            removePlayerFromRoom(io, roomCode, socket.id);
+          }
+        }, DISCONNECT_GRACE_MS),
+      );
     });
   });
 };

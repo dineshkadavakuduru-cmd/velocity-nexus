@@ -80,7 +80,9 @@ export type SocketEvents = {
   race_finish: (data: { results: Array<{ id: string; name: string; finishTime: number; position: number }> }) => void;
   room_created: (data: { roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId?: string }) => void;
   joined_room: (data: { success: boolean; roomCode: string; players: PlayerState[]; settings: RaceSettings; isHost: boolean; playerId: string }) => void;
-  room_update: (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; isHost: boolean }) => void;
+  room_update: (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; hostId: string; isHost: boolean }) => void;
   player_joined: (player: PlayerState) => void;
-  player_left: (playerId: string) => void;
+  player_left: (data: { playerId: string; hostId: string }) => void;
+  host_changed: (data: { hostId: string }) => void;
+  ping: (ack: (payload: { t: number }) => void) => void;
 };

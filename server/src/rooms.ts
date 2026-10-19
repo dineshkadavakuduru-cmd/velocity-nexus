@@ -6,10 +6,37 @@ export const GAME_TICK_RATE = 60;
 export const COUNTDOWN_DURATION = 3;
 export const RACE_TIMEOUT_MS = 300000;
 export const RESULT_GRACE_MS = 30000;
-export const DISCONNECT_GRACE_MS = 30000;
+/** How long a disconnected player's slot is held for a reconnect. */
+export const DISCONNECT_GRACE_MS = Math.max(500, Number(process.env.DISCONNECT_GRACE_MS) || 30000);
 
 export const rooms = new Map<string, Room>();
 export const playerRooms = new Map<string, string>();
+
+/**
+ * Pending disconnect-grace timers, keyed by the socket id that disconnected.
+ * Tracked so they can be cancelled when the player reconnects before the
+ * window expires or when the room is torn down — never left dangling.
+ */
+export const graceTimers = new Map<string, NodeJS.Timeout>();
+
+export const setGraceTimer = (socketId: string, timer: NodeJS.Timeout) => {
+  const existing = graceTimers.get(socketId);
+  if (existing) clearTimeout(existing);
+  graceTimers.set(socketId, timer);
+};
+
+export const clearGraceTimer = (socketId: string): boolean => {
+  const timer = graceTimers.get(socketId);
+  if (!timer) return false;
+  clearTimeout(timer);
+  graceTimers.delete(socketId);
+  return true;
+};
+
+/** Drop the bookkeeping once a grace timer has fired on its own. */
+export const forgetGraceTimer = (socketId: string): void => {
+  graceTimers.delete(socketId);
+};
 
 export const generateRoomCode = (): string => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -89,6 +116,7 @@ export const destroyRoom = (roomCode: string) => {
   if (!room) return;
   clearTimers(room);
   room.players.forEach((_, playerId) => {
+    clearGraceTimer(playerId);
     if (playerRooms.get(playerId) === roomCode) playerRooms.delete(playerId);
   });
   rooms.delete(roomCode);
@@ -109,24 +137,32 @@ export const schedulePostRaceCleanup = (io: Server, room: Room) => {
 export const removePlayerFromRoom = (io: Server, roomCode: string, playerId: string) => {
   const room = rooms.get(roomCode);
   if (!room) return;
+  clearGraceTimer(playerId);
   room.players.delete(playerId);
   if (playerRooms.get(playerId) === roomCode) playerRooms.delete(playerId);
-  io.to(roomCode).emit("player_left", playerId);
+  let hostChanged = false;
   if (room.hostId === playerId) {
-    const next = room.players.keys().next();
-    if (!next.done) {
-      room.hostId = next.value as string;
+    // Prefer a connected player as the new host; fall back to any remaining.
+    const next =
+      Array.from(room.players.entries()).find(([, p]) => p.isConnected)?.[0] ??
+      (room.players.keys().next().value as string | undefined);
+    if (next) {
+      room.hostId = next;
+      hostChanged = true;
     }
   }
+  io.to(roomCode).emit("player_left", { playerId, hostId: room.hostId });
   if (room.players.size === 0) {
     destroyRoom(roomCode);
-  } else {
-    io.to(roomCode).emit("room_update", {
-      players: Array.from(room.players.values()),
-      settings: room.settings,
-      roomCode: room.roomCode,
-    });
+    return;
   }
+  io.to(roomCode).emit("room_update", {
+    players: Array.from(room.players.values()),
+    settings: room.settings,
+    roomCode: room.roomCode,
+    hostId: room.hostId,
+  });
+  if (hostChanged) io.to(roomCode).emit("host_changed", { hostId: room.hostId });
 };
 
 export const broadcastGameState = (io: Server, room: Room) => {

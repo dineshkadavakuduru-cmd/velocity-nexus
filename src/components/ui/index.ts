@@ -17,6 +17,8 @@ import { LapCounter } from "./LapCounter";
 import { NitroBar } from "./NitroBar";
 import { DamageIndicator } from "./DamageIndicator";
 import { Skeleton } from "./Skeleton";
+import { MultiplayerStatusBanner } from "./MultiplayerStatusBanner";
+import { LatencyIndicator } from "./LatencyIndicator";
 
 export {
   SparklesBackground,
@@ -38,4 +40,6 @@ export {
   NitroBar,
   DamageIndicator,
   Skeleton,
+  MultiplayerStatusBanner,
+  LatencyIndicator,
 };

@@ -3,7 +3,7 @@
 import { Suspense, useRef, useEffect, useCallback, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/cannon";
-import { Environment, Stats } from "@react-three/drei";
+import { Environment, Stats, useProgress } from "@react-three/drei";
 import { motion, AnimatePresence } from "motion/react";
 import * as THREE from "three";
 
@@ -20,10 +20,12 @@ import {
   CountdownOverlay,
   Minimap,
   NeonText,
+  MultiplayerStatusBanner,
+  LatencyIndicator,
 } from "@/components/ui";
 import { useGameStore } from "@/stores/gameStore";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
-import { initAudio } from "@/lib/audio";
+import { initAudio, setAudioPaused, disposeAudio, unlockAudioOnGesture } from "@/lib/audio";
 import { useGameLoop, useCountdown, useRaceTimer } from "@/hooks/useGameLoop";
 import { CAR_CONFIGS, TRACK_CONFIGS, COLORS } from "@/lib/constants";
 import { PlayerState, QualityPreset } from "@/types";
@@ -194,12 +196,40 @@ export const GameCanvas = ({
   const [glError, setGlError] = useState<string | null>(null);
   const [showQuality, setShowQuality] = useState(false);
 
+  // Real asset-load progress (textures etc.) driven by three's loading manager,
+  // instead of a synthetic bar. Overlay shows only while assets are in flight.
+  const { progress: assetProgress, active: assetsLoading } = useProgress();
+
+  const closeAudioRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
+    // A remount (StrictMode / fast navigation) cancels the pending teardown.
+    if (closeAudioRef.current) {
+      clearTimeout(closeAudioRef.current);
+      closeAudioRef.current = null;
+    }
     setWebGLok(isWebGLAvailable());
     // Without this, Howler never loads any buffer and every playOneShot
     // (countdown beeps, race start, victory…) is a silent no-op.
     initAudio().catch((err) => console.warn("Audio init failed (non-fatal):", err));
+    unlockAudioOnGesture();
+    return () => {
+      // Stop looping channels immediately; fully release the audio context on a
+      // deferred tick so a StrictMode remount doesn't tear down a live system.
+      setAudioPaused(false);
+      closeAudioRef.current = setTimeout(() => {
+        disposeAudio();
+        closeAudioRef.current = null;
+      }, 250);
+    };
   }, []);
+
+  // Pausing the race must also silence it — Vehicle stops driving the engine
+  // mixer while paused, which would otherwise leave the loop at its last volume.
+  useEffect(() => {
+    setAudioPaused(isPaused);
+    return () => setAudioPaused(false);
+  }, [isPaused]);
 
   // Camera: C cycles chase -> cockpit -> cinematic. Pause: Escape toggles.
   useEffect(() => {
@@ -332,6 +362,15 @@ export const GameCanvas = ({
       </Canvas>
 
       <CountdownOverlay count={countdown} />
+
+      {/* Real asset-loading screen while textures stream in. */}
+      {assetsLoading && <LoadingScreen progress={Math.max(5, assetProgress)} />}
+
+      {/* Clear in-game signal when the multiplayer server drops or wakes up. */}
+      <MultiplayerStatusBanner visible={mode === "multiplayer"} />
+
+      {/* Realtime round-trip indicator (multiplayer only). */}
+      {mode === "multiplayer" && <LatencyIndicator className="fixed bottom-4 right-4 z-[80]" />}
 
       {/* Quality + pause controls */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] flex gap-2">

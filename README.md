@@ -73,10 +73,22 @@ Socket.IO process in `server/`.
 ### Wire the web app (both options)
 
 ```powershell
+# Add for BOTH Production and Preview scopes — preview builds need it too.
 vercel env add NEXT_PUBLIC_SOCKET_URL production
+vercel env add NEXT_PUBLIC_SOCKET_URL preview
 # paste: https://<your-server-host>  (no trailing slash)
 git push origin main   # Vercel rebuilds; /lobby flips to CONNECTED
 ```
+
+The client upgrades the scheme to match the page (http->https / ws->wss on any
+TLS page), so a stray `http://` value will not trip mixed-content blocking.
+
+Set `ALLOWED_ORIGINS` on the socket host to include the production domain and
+Vercel previews (`https://gt-umber-alpha.vercel.app,https://*.vercel.app`); the
+server matches wildcard entries.
+
+Health checks: the socket server exposes `GET /health` (rooms, players,
+uptime); the web app exposes `GET /api/health` (uptime monitor target).
 
 Local dev is unchanged: `NEXT_PUBLIC_SOCKET_URL=http://localhost:3001`
 in `.env.local` + `npm run server:dev`.

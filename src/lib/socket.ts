@@ -6,25 +6,72 @@ let socket: Socket | null = null;
 let connectionState: ConnectionState = "DISCONNECTED";
 const stateListeners = new Set<(state: ConnectionState) => void>();
 
-export const getSocketUrl = (): string | null => {
-  const url = process.env.NEXT_PUBLIC_SOCKET_URL;
-  if (!url || url.trim() === "") return null;
-  return url.trim();
-};
+/** Round-trip time to the multiplayer server, in ms (null until measured). */
+let latencyMs: number | null = null;
+const latencyListeners = new Set<(ms: number | null) => void>();
+let latencyInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Stable per-browser identity. Kept for the lifetime of the page so that a
- * reconnected socket can present it and reclaim its held player slot instead
- * of appearing as a duplicate. Not used for anything else.
+ * Resolve the Socket.IO server URL.
+ *
+ * The scheme is upgraded to match the page: an `https://` page cannot open a
+ * plain `http://`/`ws://` socket (mixed-content block), so http->https and
+ * ws->wss are forced when the page itself is served over TLS. This keeps
+ * `NEXT_PUBLIC_SOCKET_URL` working whether it is written as http(s) or ws(s).
+ */
+export const getSocketUrl = (): string | null => {
+  const raw = process.env.NEXT_PUBLIC_SOCKET_URL;
+  if (!raw || raw.trim() === "") return null;
+  let url = raw.trim().replace(/\/+$/, "");
+
+  const pageIsHttps =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
+  if (pageIsHttps) {
+    url = url.replace(/^http:\/\//i, "https://").replace(/^ws:\/\//i, "wss://");
+  } else {
+    url = url.replace(/^https:\/\//i, "http://").replace(/^wss:\/\//i, "ws://");
+  }
+  // Socket.IO accepts a ws(s):// URL; normalise it to the http(s) form it
+  // prefers internally so the same string works for the /health probe too.
+  url = url.replace(/^wss:\/\//i, "https://").replace(/^ws:\/\//i, "http://");
+  return url;
+};
+
+const SESSION_CLIENT_ID_KEY = "vn-client-id";
+
+/**
+ * Stable per-browser-session identity so a socket that reconnects (including
+ * one after a mid-race page refresh) reclaims the slot held for it during the
+ * disconnect grace window instead of showing up as a duplicate ghost car.
+ *
+ * sessionStorage is deliberate: it survives a reload in the same tab but is
+ * scoped per tab, so two tabs are treated as two distinct racers.
  */
 let clientId: string | null = null;
 export const getClientId = (): string => {
   if (clientId) return clientId;
-  const fallback = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   try {
-    clientId = globalThis.crypto?.randomUUID?.() ?? fallback;
+    const existing = globalThis.sessionStorage?.getItem(SESSION_CLIENT_ID_KEY);
+    if (existing) {
+      clientId = existing;
+      return clientId;
+    }
   } catch {
-    clientId = fallback;
+    /* storage unavailable (privacy mode / SSR) */
+  }
+  const fallback = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  let generated = fallback;
+  try {
+    generated = globalThis.crypto?.randomUUID?.() ?? fallback;
+  } catch {
+    generated = fallback;
+  }
+  clientId = generated;
+  try {
+    globalThis.sessionStorage?.setItem(SESSION_CLIENT_ID_KEY, generated);
+  } catch {
+    /* non-fatal */
   }
   return clientId;
 };
@@ -43,6 +90,40 @@ export const onConnectionStateChange = (listener: (state: ConnectionState) => vo
   return () => stateListeners.delete(listener);
 };
 
+export const getLatency = (): number | null => latencyMs;
+
+export const onLatencyChange = (listener: (ms: number | null) => void): (() => void) => {
+  latencyListeners.add(listener);
+  if (latencyMs !== null) listener(latencyMs);
+  return () => latencyListeners.delete(listener);
+};
+
+const setLatency = (ms: number | null) => {
+  latencyMs = ms;
+  latencyListeners.forEach((listener) => listener(ms));
+};
+
+const pingOnce = (s: Socket) => {
+  if (!s.connected) return;
+  const sentAt = Date.now();
+  s.timeout(4000).emit("ping", (_err: unknown) => {
+    // Acknowledged within the timeout: record the round trip.
+    if (!_err) setLatency(Date.now() - sentAt);
+  });
+};
+
+const startLatencyMonitor = (s: Socket) => {
+  if (latencyInterval) return;
+  pingOnce(s);
+  latencyInterval = setInterval(() => pingOnce(s), 5000);
+};
+
+const stopLatencyMonitor = () => {
+  if (latencyInterval) clearInterval(latencyInterval);
+  latencyInterval = null;
+  setLatency(null);
+};
+
 /** Single shared socket instance. Lazy-created, never duplicated. */
 export const initSocket = (): Socket | null => {
   const socketUrl = getSocketUrl();
@@ -54,11 +135,13 @@ export const initSocket = (): Socket | null => {
     socket = io(socketUrl, {
       transports: ["websocket"],
       reconnection: true,
-      reconnectionAttempts: 10,
+      // Generous window so a cold-starting free-tier host (~30-60s) can come
+      // back before the client declares the server offline.
+      reconnectionAttempts: 25,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 8000,
       autoConnect: false,
-      timeout: 10000,
+      timeout: 20000,
     });
 
     socket.io.on("reconnect_attempt", () => {
@@ -67,6 +150,7 @@ export const initSocket = (): Socket | null => {
 
     socket.on("connect", () => {
       setConnectionState("CONNECTED");
+      startLatencyMonitor(socket!);
     });
 
     socket.on("disconnect", (reason) => {
@@ -96,6 +180,7 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
+  stopLatencyMonitor();
   setConnectionState("DISCONNECTED");
 };
 

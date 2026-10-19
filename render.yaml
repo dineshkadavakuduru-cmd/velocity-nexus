@@ -7,5 +7,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
+      # Production domain plus any Vercel preview deployment
+      # (https://gt-git-<branch>-<team>.vercel.app etc.).
       - key: ALLOWED_ORIGINS
-        value: https://gt-umber-alpha.vercel.app
+        value: https://gt-umber-alpha.vercel.app,https://*.vercel.app

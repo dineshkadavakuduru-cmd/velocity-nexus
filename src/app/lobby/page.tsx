@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { NeonText, GlassmorphicPanel, SparklesBackground } from "@/components/ui";
+import { NeonText, GlassmorphicPanel, SparklesBackground, LatencyIndicator } from "@/components/ui";
 import { RoomCreator, PlayerList, ChatBox, ReadyButton } from "@/components/lobby";
 import { COLORS } from "@/lib/constants";
 import { useLobbyStore } from "@/stores/lobbyStore";
@@ -57,7 +57,7 @@ const LobbyPage = () => {
       case "DISCONNECTED":
         return "Disconnected from server";
       case "SERVER_OFFLINE":
-        return "Multiplayer server unavailable";
+        return "Multiplayer server unavailable (it may be waking up — free hosts sleep when idle)";
       default:
         return "Unknown connection state";
     }
@@ -105,6 +105,9 @@ const LobbyPage = () => {
               {getConnectionStatusText()}
               {serverHealthy ? " (server healthy)" : ""}
             </motion.p>
+            <div className="mt-3 flex justify-center">
+              <LatencyIndicator />
+            </div>
             {(connectionState === "SERVER_OFFLINE" || connectionState === "DISCONNECTED") && (
               <div className="mt-3 flex items-center justify-center gap-3 text-sm">
                 <button

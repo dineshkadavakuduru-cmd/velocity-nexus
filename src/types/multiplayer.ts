@@ -37,13 +37,15 @@ export type SocketServerEvents = {
   chat_message: (data: { roomCode: string; message: string }) => void;
   ready_state: (data: { roomCode: string; isReady: boolean }) => void;
   start_race: (data: { roomCode: string }) => void;
+  ping: (ack: (payload: { t: number }) => void) => void;
 };
 
 export type SocketClientEvents = {
   error: (message: string) => void;
   player_joined: (player: PlayerState) => void;
-  player_left: (playerId: string) => void;
-  room_update: (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; isHost: boolean }) => void;
+  player_left: (data: { playerId: string; hostId: string }) => void;
+  host_changed: (data: { hostId: string }) => void;
+  room_update: (data: { players: PlayerState[]; settings: RaceSettings; roomCode: string; hostId: string }) => void;
   countdown: (data: { count: number }) => void;
   race_start: (data: { startTime: number }) => void;
   game_state: (data: GameState) => void;

@@ -70,6 +70,7 @@ export const initAudio = async (): Promise<void> => {
 
     Howler.autoUnlock = true;
     Howler.autoSuspend = false;
+    unlockAudioOnGesture();
 
     const config = soundConfig;
     for (const [name, cfg] of Object.entries(config)) {
@@ -233,6 +234,87 @@ export const setMasterVolume = (volume: number): void => {
 
 export const getActiveSounds = (): Record<string, Howl> => {
   return activeSounds;
+};
+
+const LOOPING_SOUNDS: SoundName[] = [
+  "engineIdle",
+  "engineLow",
+  "engineMid",
+  "engineHigh",
+  "tireScreech",
+  "nitro",
+  "ambient1",
+  "ambient2",
+  "wind",
+];
+
+let gestureUnlockBound = false;
+
+/**
+ * Browsers keep the AudioContext suspended until the first user gesture.
+ * Howler.autoUnlock covers most cases, but we also bind an explicit one-time
+ * unlock so audio reliably starts on the first tap/click/key press.
+ */
+export const unlockAudioOnGesture = (): void => {
+  if (gestureUnlockBound || typeof window === "undefined") return;
+  gestureUnlockBound = true;
+
+  const unlock = () => {
+    try {
+      const ctx = (Howler as unknown as { ctx?: AudioContext }).ctx;
+      if (ctx && ctx.state === "suspended") void ctx.resume();
+      // Play a silent tick to fully prime the output on iOS Safari.
+      const prime = new Howl({ src: ["/sounds/countdown-beep.wav"], volume: 0 });
+      prime.once("load", () => prime.play());
+      prime.once("play", () => prime.stop());
+    } catch {
+      /* non-fatal */
+    }
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+    window.removeEventListener("touchstart", unlock);
+  };
+
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
+};
+
+/** Stop every looping channel. Used when pausing or leaving a race. */
+export const stopAllLoops = (): void => {
+  for (const name of LOOPING_SOUNDS) stopSound(name);
+};
+
+let audioPaused = false;
+
+/** Pause/resume all game audio (e.g. when the in-race pause menu opens). */
+export const setAudioPaused = (paused: boolean): void => {
+  if (audioPaused === paused) return;
+  audioPaused = paused;
+  try {
+    if (paused) {
+      stopAllLoops();
+      Howler.mute(true);
+    } else {
+      Howler.mute(false);
+    }
+  } catch {
+    /* non-fatal */
+  }
+};
+
+export const isAudioPaused = (): boolean => audioPaused;
+
+/** Tear everything down — call on unmount so no Howl/context leaks. */
+export const disposeAudio = (): void => {
+  try {
+    stopAllLoops();
+    Howler.unload();
+  } catch {
+    /* non-fatal */
+  }
+  for (const key of Object.keys(activeSounds)) delete activeSounds[key];
+  audioPaused = false;
 };
 
 export type { SoundName };
