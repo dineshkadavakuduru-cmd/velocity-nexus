@@ -18,9 +18,9 @@ export interface NeonTextProps {
 }
 
 const GlowMap = {
-  low: (color: string) => `0 0 5px ${color}, 0 0 10px ${color}40`,
-  medium: (color: string) => `0 0 10px ${color}, 0 0 20px ${color}60, 0 0 30px ${color}30`,
-  high: (color: string) => `0 0 15px ${color}, 0 0 30px ${color}70, 0 0 45px ${color}40, 0 0 60px ${color}20`,
+  low: (color: string) => `0 0 5px ${color}55`,
+  medium: (color: string) => `0 0 8px ${color}70, 0 0 16px ${color}30`,
+  high: (color: string) => `0 0 10px ${color}55, 0 0 24px ${color}26`,
 };
 
 export const NeonText = memo(({
@@ -54,13 +54,13 @@ export const NeonText = memo(({
 
   const flickerAnimation = flickering
     ? {
-        opacity: [1, 0.8, 1, 0.9, 1],
+        opacity: [1, 0.85, 1, 0.92, 1],
         filter: [
-          `drop-shadow(0 0 5px ${color}) drop-shadow(0 0 15px ${color})`,
-          `drop-shadow(0 0 3px ${color}) drop-shadow(0 0 10px ${color}60)`,
-          `drop-shadow(0 0 5px ${color}) drop-shadow(0 0 15px ${color})`,
-          `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 12px ${color}50)`,
-          `drop-shadow(0 0 5px ${color}) drop-shadow(0 0 15px ${color})`,
+          `drop-shadow(0 0 4px ${color}80)`,
+          `drop-shadow(0 0 3px ${color}60)`,
+          `drop-shadow(0 0 4px ${color}80)`,
+          `drop-shadow(0 0 3px ${color}66)`,
+          `drop-shadow(0 0 4px ${color}80)`,
         ],
       }
     : {};

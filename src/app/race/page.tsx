@@ -12,7 +12,7 @@ const DynamicGameCanvas = dynamic(
   () => import("@/components/game/GameCanvas").then((mod) => mod.GameCanvas),
   {
     ssr: false,
-    loading: () => <LoadingScreen progress={50} />,
+    loading: () => <LoadingScreen progress={60} label="Loading the race engine" />,
   }
 );
 
@@ -34,7 +34,7 @@ function RaceContent() {
   }, [searchParams]);
 
   if (!isReady) {
-    return <LoadingScreen progress={30} />;
+    return <LoadingScreen progress={30} label="Preparing the track" />;
   }
 
   return <DynamicGameCanvas mode={mode} quality={quality} />;
@@ -42,7 +42,7 @@ function RaceContent() {
 
 const RacePage = () => {
   return (
-    <Suspense fallback={<LoadingScreen progress={50} />}>
+    <Suspense fallback={<LoadingScreen progress={50} label="Preparing the track" />}>
       <RaceContent />
     </Suspense>
   );

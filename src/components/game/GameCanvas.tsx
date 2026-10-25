@@ -327,7 +327,7 @@ export const GameCanvas = ({
   }
 
   if (webGLok === null) {
-    return <LoadingScreen progress={20} />;
+    return <LoadingScreen progress={20} label="Checking graphics support" />;
   }
 
   const dpr: [number, number] =
@@ -364,7 +364,7 @@ export const GameCanvas = ({
       <CountdownOverlay count={countdown} />
 
       {/* Real asset-loading screen while textures stream in. */}
-      {assetsLoading && <LoadingScreen progress={Math.max(5, assetProgress)} />}
+      {assetsLoading && <LoadingScreen progress={Math.max(5, assetProgress)} label="Loading track assets" />}
 
       {/* Clear in-game signal when the multiplayer server drops or wakes up. */}
       <MultiplayerStatusBanner visible={mode === "multiplayer"} />

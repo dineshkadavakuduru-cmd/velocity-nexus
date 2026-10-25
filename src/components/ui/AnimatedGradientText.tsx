@@ -27,7 +27,7 @@ export const AnimatedGradientText = memo(({
   const intensityMap = {
     low: "text-transparent bg-clip-text bg-gradient-to-r",
     medium: "text-transparent bg-clip-text bg-gradient-to-r drop-shadow-md",
-    high: "text-transparent bg-clip-text bg-gradient-to-r drop-shadow-[0_0_15px_rgba(0,240,255,0.5)] drop-shadow-[0_0_30px_rgba(255,0,255,0.3)]",
+    high: "text-transparent bg-clip-text bg-gradient-to-r drop-shadow-[0_0_10px_rgba(0,240,255,0.28)]",
   };
 
   const gradient = `from-[${gradientColors[0]}] via-[${gradientColors[1]}] to-[${gradientColors[2]}]`;

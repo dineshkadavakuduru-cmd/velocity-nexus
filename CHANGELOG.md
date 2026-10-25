@@ -6,6 +6,35 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Readability, loading feedback & mobile
+
+**Contrast / glow**
+- The shared secondary text token was `#ff00ff80` (50%-alpha magenta), which
+  rendered as a dark purple at ~2:1 against the black background. It is now an
+  opaque, readable lavender (`#e6b8ff`); this lifts body copy, labels and card
+  text across the hero, garage, tracks, lobby and results pages to WCAG AA/AAA
+  while keeping the neon identity.
+- Added a dedicated `.hero-subtitle` style (readable purple, relaxed leading) for
+  the hero paragraph.
+- Toned down the excessive bloom on `.neon-text`, `.neon-text-pink`,
+  `NeonText` (all glow intensities + flicker) and `AnimatedGradientText` so neon
+  headings stay crisp instead of washing into a bright blob.
+
+**Track preparation feedback**
+- `LoadingScreen` now exposes a determinate, accessible progress bar
+  (`role="progressbar"` + `aria-valuenow`/`aria-valuetext`, clamped 0–100) with a
+  stage `label`.
+- Failure states are explicit: a `role="alert"` panel titled
+  "TRACK PREPARATION FAILED" explains the likely cause and offers RETRY plus a
+  "Back to menu" link, instead of the previous low-contrast inline string.
+- Callers pass a stage label ("Loading the race engine", "Preparing the track",
+  "Loading track assets", "Checking graphics support").
+
+**Mobile**
+- Hero header stacks on narrow screens and the nav wraps with smaller type so the
+  brand + GARAGE/TRACKS/MULTIPLAYER links no longer overflow 375px-class phones;
+  hero subtitle/CTA are fluid-sized.
+
 ### Client/server split audit
 
 **Hosting**

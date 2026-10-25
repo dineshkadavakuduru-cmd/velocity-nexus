@@ -7,7 +7,10 @@
   --card-foreground: #f0f0f0;
   --primary: #00f0ff;
   --primary-glow: #00f0ff40;
-  --secondary: #ff00ff80;
+  /* Readable body/label purple. The old #ff00ff80 rendered as a dark purple
+     on the black background (≈2:1 contrast); this keeps the neon identity
+     while clearing WCAG AA/AAA for text. */
+  --secondary: #e6b8ff;
   --accent: #ff00ff;
   --accent-glow: #ff00ff40;
   --border: #222222;
@@ -67,20 +70,24 @@
   }
   .neon-text {
     color: #00f0ff;
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.7),
-                 0 0 20px rgba(0, 240, 255, 0.5),
-                 0 0 30px rgba(0, 240, 255, 0.3);
+    /* Restrained halo: still neon, but the letters stay crisp instead of
+       washing out into a bright blob on dark backgrounds. */
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.35),
+                 0 0 18px rgba(0, 240, 255, 0.15);
   }
   .hero-title {
-    color: #f2f0e9;
+    color: #f7f5ef;
     letter-spacing: -0.06em;
-    text-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+  }
+  .hero-subtitle {
+    color: #e0c2ff;
+    line-height: 1.65;
   }
   .neon-text-pink {
-    color: #ff00ff;
-    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7),
-                 0 0 20px rgba(255, 0, 255, 0.5),
-                 0 0 30px rgba(255, 0, 255, 0.3);
+    color: #ff7bf5;
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.32),
+                 0 0 18px rgba(255, 0, 255, 0.14);
   }
   .glow-primary {
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.5),

@@ -22,12 +22,12 @@ const HeroSection = () => {
       />
 
       <div className="relative z-10 flex min-h-screen flex-col items-center">
-        <header className="w-full py-8 px-6 flex justify-between items-center">
-          <p className="text-3xl sm:text-4xl font-display font-black neon-text">
+        <header className="w-full py-6 sm:py-8 px-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+          <p className="text-2xl sm:text-4xl font-display font-black neon-text text-center sm:text-left">
             VELOCITY NEXUS
           </p>
           <nav aria-label="Main navigation">
-            <ul className="flex items-center gap-4 font-display text-sm font-bold tracking-widest">
+            <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-display text-xs sm:text-sm font-bold tracking-widest">
               <li>
                 <a href="/garage" className="nav-link">GARAGE</a>
               </li>
@@ -42,19 +42,19 @@ const HeroSection = () => {
         </header>
 
         <main className="relative z-10 flex flex-col items-center flex-1 w-full">
-          <div className="relative w-full max-w-4xl mx-auto text-center py-16 sm:py-24 px-6">
+          <div className="relative w-full max-w-4xl mx-auto text-center py-12 sm:py-24 px-6">
                <h1 className="mb-4 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black tracking-tight hero-title">
                Find your line.
             </h1>
 
-            <p className="text-lg sm:text-xl text-secondary max-w-2xl mx-auto mb-8">
+            <p className="hero-subtitle text-base sm:text-xl max-w-2xl mx-auto mb-8">
                A focused browser racer built around clean handling, readable tracks, and
                real competition. Pick a car, learn the circuit, and chase a better lap.
             </p>
 
             <a
               href="/race?mode=single"
-               className="hero-cta inline-flex items-center justify-center px-8 py-4 text-xl tracking-widest"
+               className="hero-cta inline-flex items-center justify-center px-6 sm:px-8 py-3.5 sm:py-4 text-lg sm:text-xl tracking-widest"
             >
                Start a race
             </a>
