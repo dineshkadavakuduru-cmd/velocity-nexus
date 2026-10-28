@@ -18,9 +18,9 @@ export interface AnimatedGradientTextProps {
 export const AnimatedGradientText = memo(({
   children,
   className = "",
-  gradientColors = [COLORS.primary, COLORS.secondary, COLORS.accent, COLORS.primary],
+  gradientColors = [COLORS.primary, COLORS.neonOrange],
   animate = true,
-  intensity = "high",
+  intensity = "medium",
   onClick,
   as = "span",
 }: AnimatedGradientTextProps) => {
@@ -30,7 +30,7 @@ export const AnimatedGradientText = memo(({
     high: "text-transparent bg-clip-text bg-gradient-to-r drop-shadow-[0_0_10px_rgba(0,240,255,0.28)]",
   };
 
-  const gradient = `from-[${gradientColors[0]}] via-[${gradientColors[1]}] to-[${gradientColors[2]}]`;
+  const gradient = `from-[${gradientColors[0]}] via-[${gradientColors[1]}] to-[${gradientColors[0]}]`;
 
   const baseClasses = `${intensityMap[intensity]} font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight`;
 
@@ -39,14 +39,14 @@ export const AnimatedGradientText = memo(({
       <motion.span
         className={`${baseClasses} ${className} cursor-pointer`}
         onClick={onClick}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.98 }}
       >
         <motion.span
           className="bg-clip-text text-transparent bg-gradient-to-r font-black"
           style={{
             background: `linear-gradient(90deg, ${gradientColors.join(", ")})`,
-            backgroundSize: animate ? "300% 300%" : "100% 100%",
+            backgroundSize: animate ? "200% 200%" : "100% 100%",
           }}
           animate={
             animate
@@ -56,7 +56,7 @@ export const AnimatedGradientText = memo(({
               : {}
           }
           transition={{
-            duration: 3,
+            duration: 4,
             repeat: animate ? Infinity : 1,
             ease: "linear",
           }}
@@ -67,7 +67,7 @@ export const AnimatedGradientText = memo(({
     );
   }
 
-  const initialProps = animate ? { opacity: 0, y: 50 } : {};
+  const initialProps = animate ? { opacity: 0, y: 30 } : {};
   const animateProps = animate ? { opacity: 1, y: 0 } : {};
 
   return (
@@ -75,13 +75,13 @@ export const AnimatedGradientText = memo(({
       className={`${baseClasses} ${className}`}
       initial={initialProps}
       animate={animateProps}
-      transition={{ duration: 1, ease: "easeOut" }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
     >
       <motion.span
         className="bg-clip-text text-transparent bg-gradient-to-r font-black"
         style={{
           background: `linear-gradient(90deg, ${gradientColors.join(", ")})`,
-          backgroundSize: animate ? "400% 400%" : "100% 100%",
+          backgroundSize: animate ? "200% 200%" : "100% 100%",
         }}
         animate={
           animate
@@ -91,7 +91,7 @@ export const AnimatedGradientText = memo(({
             : {}
         }
         transition={{
-          duration: 4,
+          duration: 6,
           repeat: animate ? Infinity : 1,
           ease: "linear",
           delay: 0.2,

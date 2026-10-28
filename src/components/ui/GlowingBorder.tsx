@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { memo, useState, useRef, useEffect } from "react";
+import { memo, useState, useRef } from "react";
 import { motion } from "motion/react";
 import { COLORS } from "@/lib/constants";
 
@@ -19,7 +19,7 @@ export const GlowingBorder = memo(({
   className = "",
   color = COLORS.primary,
   intensity = "medium",
-  animate = true,
+  animate = false,
   rounded = true,
   padding = "p-4",
 }: GlowingBorderProps) => {
@@ -27,9 +27,9 @@ export const GlowingBorder = memo(({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const intensityMap = {
-    low: `0 0 10px ${color}40, 0 0 20px ${color}20`,
-    medium: `0 0 15px ${color}50, 0 0 30px ${color}30`,
-    high: `0 0 20px ${color}70, 0 0 40px ${color}40, 0 0 60px ${color}20`,
+    low: `0 0 8px ${color}40, 0 0 16px ${color}20`,
+    medium: `0 0 12px ${color}50, 0 0 24px ${color}30`,
+    high: `0 0 16px ${color}70, 0 0 32px ${color}40`,
   };
 
   const boxShadow = isHovered
@@ -57,24 +57,6 @@ export const GlowingBorder = memo(({
       >
         {children}
       </div>
-
-      {animate && (
-        <motion.div
-          className="absolute inset-0 rounded-xl -z-10"
-          style={{
-            background: `conic-gradient(45deg, ${color}40, transparent, ${color}40)`,
-            filter: "blur(2px)",
-          }}
-          animate={{
-            rotate: isHovered ? 360 : 0,
-            opacity: isHovered ? 0.6 : 0.3,
-          }}
-          transition={{
-            rotate: { duration: 8, ease: "linear" },
-            opacity: { duration: 0.3 },
-          }}
-        />
-      )}
     </motion.div>
   );
 });

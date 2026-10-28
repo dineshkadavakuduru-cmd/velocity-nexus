@@ -506,11 +506,11 @@ export const GameCanvas = ({
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <NeonText color={COLORS.accent} className="text-5xl mb-6">
+              <NeonText color={COLORS.primary} className="text-5xl mb-6">
                 RACE FINISHED
               </NeonText>
 
-              <div className="space-y-3 mt-6">
+<div className="space-y-3 mt-6">
                 {raceResults
                   .slice()
                   .sort((a, b) => a.position - b.position)
@@ -528,7 +528,7 @@ export const GameCanvas = ({
                     >
                       <span
                         className="text-2xl font-display font-bold"
-                        style={{ color: i === 0 ? COLORS.accent : COLORS.textSecondary }}
+                        style={{ color: i === 0 ? COLORS.accent : i === 1 ? COLORS.neonOrange : i === 2 ? COLORS.primary : COLORS.textSecondary }}
                       >
                         #{result.position}
                       </span>
@@ -543,7 +543,7 @@ export const GameCanvas = ({
               <motion.button
                 className="mt-8 px-8 py-3 rounded-xl font-display font-bold text-lg"
                 style={{
-                  background: `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.secondary}40)`,
+                  background: `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.neonOrange}40)`,
                   border: `1px solid ${COLORS.primary}`,
                   color: COLORS.textPrimary,
                 }}

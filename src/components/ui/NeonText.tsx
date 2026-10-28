@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { memo, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { COLORS } from "@/lib/constants";
 import React from "react";
 import type { JSX } from "react";
@@ -18,17 +18,17 @@ export interface NeonTextProps {
 }
 
 const GlowMap = {
-  low: (color: string) => `0 0 5px ${color}55`,
-  medium: (color: string) => `0 0 8px ${color}70, 0 0 16px ${color}30`,
-  high: (color: string) => `0 0 10px ${color}55, 0 0 24px ${color}26`,
+  low: (color: string) => `0 0 4px ${color}40`,
+  medium: (color: string) => `0 0 6px ${color}55, 0 0 12px ${color}25`,
+  high: (color: string) => `0 0 8px ${color}60, 0 0 16px ${color}30`,
 };
 
 export const NeonText = memo(({
   children,
   className = "",
   color = COLORS.primary,
-  glowIntensity = "high",
-  flickering = true,
+  glowIntensity = "medium",
+  flickering = false,
   animateIn = false,
   tag = "span",
   delay = 0,
@@ -52,58 +52,33 @@ export const NeonText = memo(({
     }
   }, [animateIn, chars.length]);
 
-  const flickerAnimation = flickering
-    ? {
-        opacity: [1, 0.85, 1, 0.92, 1],
-        filter: [
-          `drop-shadow(0 0 4px ${color}80)`,
-          `drop-shadow(0 0 3px ${color}60)`,
-          `drop-shadow(0 0 4px ${color}80)`,
-          `drop-shadow(0 0 3px ${color}66)`,
-          `drop-shadow(0 0 4px ${color}80)`,
-        ],
-      }
-    : {};
-
-  const animation = flickering ? flickerAnimation : undefined;
-
-  const MotionTag = motion(tag as string);
-  const visibleText = animateIn ? chars.slice(0, visibleChars).join("") : children;
-
   const baseStyle: React.CSSProperties = {
     color,
     textShadow: GlowMap[glowIntensity](color),
-    letterSpacing: "0.1em",
+    letterSpacing: "0.08em",
   };
 
   return (
     <motion.div
       style={baseStyle}
-      className={`inline-block font-display font-black tracking-wider ${className}`}
-      initial={animateIn ? { opacity: 0, x: -50 } : undefined}
-      animate={animation ?? (animateIn ? { opacity: 1, x: 0 } : undefined)}
+      className={`inline-block font-display font-bold tracking-wide ${className}`}
+      initial={animateIn ? { opacity: 0, y: 20 } : undefined}
+      animate={animateIn ? { opacity: 1, y: 0 } : undefined}
       transition={{
-        duration: animateIn ? 0.5 : 2 + Math.random(),
+        duration: animateIn ? 0.4 : 0,
         delay: animateIn ? delay : undefined,
-        repeat: flickering && !animateIn ? Infinity : undefined,
-        repeatType: "loop",
-        ease: "easeInOut",
+        ease: "easeOut",
       }}
     >
       {animateIn ? (
-        <AnimatePresence>
-          {chars.slice(0, visibleChars).map((char: string, i: number) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.03 + delay }}
-              style={{ display: "inline-block" }}
-            >
-              {char}
-            </motion.span>
-          ))}
-        </AnimatePresence>
+        <motion.span
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay }}
+          style={{ display: "inline-block" }}
+        >
+          {children}
+        </motion.span>
       ) : (
         children
       )}

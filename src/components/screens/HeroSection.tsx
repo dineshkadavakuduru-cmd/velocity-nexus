@@ -16,8 +16,8 @@ const HeroSection = () => {
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       <SparklesBackground
         className="absolute inset-0"
-        density={1.5}
-        particleCount={120}
+        density={0.5}
+        particleCount={60}
         color={COLORS.primary}
       />
 

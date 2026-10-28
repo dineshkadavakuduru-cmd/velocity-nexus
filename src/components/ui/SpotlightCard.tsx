@@ -68,7 +68,7 @@ export const SpotlightCard = memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      whileHover={!disabled ? { scale: 1.03, y: -5 } : {}}
+      whileHover={!disabled ? { scale: 1.02, y: -4 } : {}}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <div className="absolute inset-0 overflow-hidden">
@@ -79,7 +79,7 @@ export const SpotlightCard = memo(({
               background: `radial-gradient(circle, ${spotlightColor} 0%, transparent 70%)`,
               left: mouseX - 170,
               top: mouseY - 170,
-              opacity: 0.3,
+              opacity: 0.15,
             }}
           />
         )}
@@ -107,7 +107,7 @@ export const SpotlightCard = memo(({
             alt={title || ""}
             fill
             className="object-cover transition-transform duration-500"
-            style={{ transform: isHovered ? "scale(1.1)" : "scale(1)" }}
+            style={{ transform: isHovered ? "scale(1.05)" : "scale(1)" }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         </div>
@@ -119,7 +119,7 @@ export const SpotlightCard = memo(({
             className="text-2xl font-display font-bold mb-1"
             style={{
               color: spotlightColor,
-              textShadow: `0 0 10px ${spotlightColor}60, 0 0 20px ${spotlightColor}30`,
+              textShadow: `0 0 8px ${spotlightColor}50, 0 0 16px ${spotlightColor}25`,
             }}
           >
             {title}
@@ -135,7 +135,7 @@ export const SpotlightCard = memo(({
         className="absolute inset-0 pointer-events-none"
         style={{
           boxShadow: isHovered
-            ? `inset 0 0 40px ${spotlightColor}20`
+            ? `inset 0 0 30px ${spotlightColor}15`
             : "none",
         }}
       />

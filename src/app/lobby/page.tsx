@@ -7,7 +7,7 @@ import { RoomCreator, PlayerList, ChatBox, ReadyButton } from "@/components/lobb
 import { COLORS } from "@/lib/constants";
 import { useLobbyStore } from "@/stores/lobbyStore";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
-import { getConnectionState, onConnectionStateChange, checkServerHealth } from "@/lib/socket";
+import { getConnectionState, onConnectionStateChange, checkServerHealth, retryConnection } from "@/lib/socket";
 
 const LobbyPage = () => {
   const [mode, setMode] = useState<"create" | "join">("create");
@@ -81,7 +81,7 @@ const LobbyPage = () => {
   if (!roomCode) {
     return (
       <div className="min-h-screen w-full bg-background relative overflow-hidden">
-        <SparklesBackground className="absolute inset-0" density={1.5} />
+        <SparklesBackground className="absolute inset-0" density={0.5} />
 
         <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
           <motion.div
@@ -111,7 +111,7 @@ const LobbyPage = () => {
             {(connectionState === "SERVER_OFFLINE" || connectionState === "DISCONNECTED") && (
               <div className="mt-3 flex items-center justify-center gap-3 text-sm">
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={retryConnection}
                   className="underline underline-offset-4 text-secondary hover:text-foreground"
                 >
                   Retry
@@ -130,7 +130,7 @@ const LobbyPage = () => {
               className={`px-6 py-2 rounded-full font-display font-bold transition-all`}
               style={{
                 background: mode === "create"
-                  ? `linear-gradient(135deg, ${COLORS.primary}30, ${COLORS.secondary}30)`
+                  ? `linear-gradient(135deg, ${COLORS.primary}30, ${COLORS.neonOrange}30)`
                   : "rgba(30, 30, 30, 0.6)",
                 color: mode === "create" ? COLORS.primary : COLORS.textSecondary,
                 border: `1px solid ${mode === "create" ? COLORS.primary : COLORS.border}`,
@@ -144,10 +144,10 @@ const LobbyPage = () => {
               className={`px-6 py-2 rounded-full font-display font-bold transition-all`}
               style={{
                 background: mode === "join"
-                  ? `linear-gradient(135deg, ${COLORS.secondary}30, ${COLORS.accent}30)`
+                  ? `linear-gradient(135deg, ${COLORS.neonOrange}30, ${COLORS.primary}30)`
                   : "rgba(30, 30, 30, 0.6)",
-                color: mode === "join" ? COLORS.secondary : COLORS.textSecondary,
-                border: `1px solid ${mode === "join" ? COLORS.secondary : COLORS.border}`,
+                color: mode === "join" ? COLORS.neonOrange : COLORS.textSecondary,
+                border: `1px solid ${mode === "join" ? COLORS.neonOrange : COLORS.border}`,
               }}
               whileHover={{ scale: 1.05 }}
             >
@@ -166,7 +166,7 @@ const LobbyPage = () => {
                 className="w-full max-w-md"
               >
                 <GlassmorphicPanel className="p-6" hover>
-                  <NeonText color={COLORS.secondary} className="text-xl mb-4">
+                  <NeonText color={COLORS.primary} className="text-xl mb-4">
                     CREATE ROOM
                   </NeonText>
 
@@ -192,12 +192,12 @@ const LobbyPage = () => {
                       className="w-full px-6 py-3 rounded-xl font-display font-bold text-lg"
                       style={{
                         background: connectionState === "CONNECTED"
-                          ? `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.secondary}40)`
+                          ? `linear-gradient(135deg, ${COLORS.primary}40, ${COLORS.neonOrange}40)`
                           : "rgba(40, 40, 40, 0.4)",
                         border: `1px solid ${connectionState === "CONNECTED" ? COLORS.primary : COLORS.border}`,
                         color: COLORS.textPrimary,
                       }}
-                      whileHover={connectionState === "CONNECTED" ? { boxShadow: `${COLORS.primary}30 0 0 20px, ${COLORS.secondary}20 0 0 30px` } : {}}
+                      whileHover={connectionState === "CONNECTED" ? { boxShadow: `${COLORS.primary}30 0 0 20px, ${COLORS.neonOrange}20 0 0 30px` } : {}}
                       whileTap={connectionState === "CONNECTED" ? { scale: 0.95 } : {}}
                     >
                       {connectionState === "CONNECTED" ? "CREATE AND START" : "WAITING FOR SERVER..."}
@@ -215,7 +215,7 @@ const LobbyPage = () => {
                 className="w-full max-w-md"
               >
                 <GlassmorphicPanel className="p-6" hover>
-                  <NeonText color={COLORS.accent} className="text-xl mb-4">
+                  <NeonText color={COLORS.neonOrange} className="text-xl mb-4">
                     JOIN ROOM
                   </NeonText>
 
@@ -253,12 +253,12 @@ const LobbyPage = () => {
                     className="mt-4 w-full px-6 py-3 rounded-xl font-display font-bold text-lg transition-all"
                     style={{
                       background: joinCode.length === 6 && connectionState === "CONNECTED"
-                        ? `linear-gradient(135deg, ${COLORS.secondary}40, ${COLORS.accent}40)`
+                        ? `linear-gradient(135deg, ${COLORS.neonOrange}40, ${COLORS.primary}40)`
                         : "rgba(40, 40, 40, 0.4)",
-                      border: `1px solid ${COLORS.secondary}`,
+                      border: `1px solid ${COLORS.neonOrange}`,
                       color: COLORS.textPrimary,
                     }}
-                    whileHover={joinCode.length === 6 && connectionState === "CONNECTED" ? { boxShadow: `${COLORS.secondary}30 0 0 20px` } : {}}
+                    whileHover={joinCode.length === 6 && connectionState === "CONNECTED" ? { boxShadow: `${COLORS.neonOrange}30 0 0 20px` } : {}}
                     whileTap={joinCode.length === 6 && connectionState === "CONNECTED" ? { scale: 0.95 } : {}}
                   >
                     {connectionState === "CONNECTED" ? "JOIN RACE" : "WAITING FOR SERVER..."}
@@ -272,9 +272,9 @@ const LobbyPage = () => {
             <motion.div
               className="mt-4 px-4 py-2 rounded-lg text-center"
               style={{
-                background: "rgba(255, 0, 120, 0.2)",
-                border: `1px solid ${COLORS.accent}`,
-                color: COLORS.accent,
+                background: "rgba(255, 145, 0, 0.2)",
+                border: `1px solid ${COLORS.neonOrange}`,
+                color: COLORS.neonOrange,
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -289,7 +289,7 @@ const LobbyPage = () => {
 
   return (
     <div className="min-h-screen w-full bg-background relative overflow-hidden">
-      <SparklesBackground className="absolute inset-0" density={1.5} />
+      <SparklesBackground className="absolute inset-0" density={0.5} />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center px-6 py-12">
         <motion.div

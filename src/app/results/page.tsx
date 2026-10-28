@@ -28,18 +28,18 @@ const ResultsPage = () => {
     { id: "1", name: "You", finishTime: raceTime || 0, position: 1 },
   ];
 
-  return (
+return (
     <div className="min-h-screen w-full bg-background relative overflow-hidden">
-      <SparklesBackground className="absolute inset-0" density={1.5} />
+      <SparklesBackground className="absolute inset-0" density={0.5} />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center py-16 px-6">
-        <motion.div
+<motion.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <NeonText color={COLORS.accent} glowIntensity="high" className="text-4xl sm:text-6xl mb-4">
+          <NeonText color={COLORS.primary} glowIntensity="medium" className="text-4xl sm:text-6xl mb-4">
             RACE COMPLETE
           </NeonText>
         </motion.div>
@@ -65,13 +65,13 @@ const ResultsPage = () => {
                   <p className="text-sm text-secondary mt-1">Selected Car</p>
                 </motion.div>
 
-                <motion.div
+<motion.div
                   className="text-center"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <NeonText color={COLORS.secondary} className="text-2xl">
+                  <NeonText color={COLORS.neonOrange} className="text-2xl">
                     {selectedTrack.name}
                   </NeonText>
                   <p className="text-sm text-secondary mt-1">Track</p>
@@ -118,14 +118,14 @@ const ResultsPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.5 + i * 0.1 }}
                       >
-                        <div className="flex items-center gap-3">
+<div className="flex items-center gap-3">
                           <motion.span
                             className="text-2xl font-display font-black"
                             style={{
                               color: i === 0
                                 ? COLORS.accent
                                 : i === 1
-                                ? COLORS.secondary
+                                ? COLORS.neonOrange
                                 : i === 2
                                 ? COLORS.primary
                                 : COLORS.textSecondary,

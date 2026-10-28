@@ -72,8 +72,8 @@
     color: #00f0ff;
     /* Restrained halo: still neon, but the letters stay crisp instead of
        washing out into a bright blob on dark backgrounds. */
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.35),
-                 0 0 18px rgba(0, 240, 255, 0.15);
+    text-shadow: 0 0 6px rgba(0, 240, 255, 0.35),
+                 0 0 12px rgba(0, 240, 255, 0.15);
   }
   .hero-title {
     color: #f7f5ef;
@@ -86,20 +86,20 @@
   }
   .neon-text-pink {
     color: #ff7bf5;
-    text-shadow: 0 0 8px rgba(255, 0, 255, 0.32),
-                 0 0 18px rgba(255, 0, 255, 0.14);
+    text-shadow: 0 0 6px rgba(255, 0, 255, 0.32),
+                 0 0 12px rgba(255, 0, 255, 0.14);
   }
   .glow-primary {
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5),
-                0 0 40px rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.5),
+                0 0 32px rgba(0, 240, 255, 0.3);
   }
   .glow-accent {
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5),
-                0 0 40px rgba(255, 0, 255, 0.3);
+    box-shadow: 0 0 16px rgba(255, 0, 255, 0.5),
+                0 0 32px rgba(255, 0, 255, 0.3);
   }
   .glow-primary-hover {
-    box-shadow: 0 0 30px rgba(0, 240, 255, 0.7),
-                0 0 60px rgba(0, 240, 255, 0.4);
+    box-shadow: 0 0 24px rgba(0, 240, 255, 0.7),
+                0 0 48px rgba(0, 240, 255, 0.4);
   }
   .border-glow {
     border: 1px solid transparent;
@@ -150,7 +150,7 @@
     transition: box-shadow 0.3s ease, transform 0.3s ease;
   }
   .feature-card:hover {
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
     transform: translateY(-2px);
   }
 }

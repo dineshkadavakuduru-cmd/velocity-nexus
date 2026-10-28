@@ -18,10 +18,10 @@ const TrackPreview = () => {
     router.push("/race?mode=single");
   };
 
-  const difficultyColors = {
-    Easy: COLORS.secondary,
+const difficultyColors = {
+    Easy: COLORS.neonGreen,
     Medium: COLORS.primary,
-    Hard: COLORS.accent,
+    Hard: COLORS.neonOrange,
     Expert: COLORS.accent,
   };
 
@@ -56,7 +56,7 @@ const TrackPreview = () => {
             >
               <SpotlightCard
                 title={track.name}
-                subtitle={`${track.difficulty} â€¢ ${track.length / 1000}km â€¢ ${track.laps} laps`}
+                subtitle={`${track.difficulty} • ${track.length / 1000}km • ${track.laps} laps`}
                 image={`/tracks/${track.thumbnail}`}
                 spotlightColor={difficultyColors[track.difficulty]}
                 onSelect={() => handleTrackSelect(track.id)}

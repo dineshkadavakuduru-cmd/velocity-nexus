@@ -35,6 +35,8 @@ export const getSocketUrl = (): string | null => {
   // Socket.IO accepts a ws(s):// URL; normalise it to the http(s) form it
   // prefers internally so the same string works for the /health probe too.
   url = url.replace(/^wss:\/\//i, "https://").replace(/^ws:\/\//i, "http://");
+  // Remove any /socket.io path suffix that may have been accidentally included.
+  url = url.replace(/\/socket\.io.*$/, "");
   return url;
 };
 
@@ -81,6 +83,10 @@ export const hasSocketUrl = (): boolean => getSocketUrl() !== null;
 const setConnectionState = (state: ConnectionState) => {
   connectionState = state;
   stateListeners.forEach((listener) => listener(state));
+  // Log state changes for debugging
+  if (typeof window !== "undefined") {
+    console.log(`[Socket] Connection state: ${state}`);
+  }
 };
 
 export const getConnectionState = (): ConnectionState => connectionState;
@@ -133,7 +139,7 @@ export const initSocket = (): Socket | null => {
   }
   if (!socket) {
     socket = io(socketUrl, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       reconnection: true,
       // Generous window so a cold-starting free-tier host (~30-60s) can come
       // back before the client declares the server offline.
@@ -151,6 +157,13 @@ export const initSocket = (): Socket | null => {
     socket.on("connect", () => {
       setConnectionState("CONNECTED");
       startLatencyMonitor(socket!);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("[Socket] Connection error:", err.message);
+      if (err.message.includes("CORS") || err.message.includes("origin")) {
+        setConnectionState("SERVER_OFFLINE");
+      }
     });
 
     socket.on("disconnect", (reason) => {
@@ -182,6 +195,12 @@ export const disconnectSocket = () => {
   }
   stopLatencyMonitor();
   setConnectionState("DISCONNECTED");
+};
+
+/** Force a fresh connection attempt, useful for manual retry. */
+export const retryConnection = () => {
+  disconnectSocket();
+  return connectSocket();
 };
 
 export const connectSocket = () => {

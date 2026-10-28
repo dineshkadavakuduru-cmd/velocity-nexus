@@ -24,9 +24,9 @@ type Particle = {
 export const SparklesBackground = memo(({
   children,
   className = "",
-  density = 1,
+  density = 0.5,
   color = COLORS.primary,
-  particleCount = 100,
+  particleCount = 60,
 }: SparklesBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -53,11 +53,11 @@ export const SparklesBackground = memo(({
     particlesRef.current = Array.from({ length: count }, () => ({
       x: Math.random() * canvas.offsetWidth,
       y: Math.random() * canvas.offsetHeight,
-      vx: (Math.random() - 0.5) * 0.15,
-      vy: (Math.random() - 0.5) * 0.15,
-      size: Math.random() * 3 + 1,
+      vx: (Math.random() - 0.5) * 0.1,
+      vy: (Math.random() - 0.5) * 0.1,
+      size: Math.random() * 2 + 0.5,
       phase: Math.random() * Math.PI * 2,
-      delta: Math.random() * 0.02 + 0.005,
+      delta: Math.random() * 0.015 + 0.003,
     }));
 
     const animate = () => {
@@ -71,7 +71,7 @@ export const SparklesBackground = memo(({
         if (p.y < 0 || p.y > canvas.offsetHeight) p.vy = -p.vy;
 
         p.phase += p.delta;
-        const alpha = Math.abs(Math.sin(p.phase)) * 0.6 + 0.2;
+        const alpha = Math.abs(Math.sin(p.phase)) * 0.4 + 0.1;
 
         ctx.fillStyle = color;
         ctx.globalAlpha = alpha;

@@ -54,7 +54,7 @@ export const GlassmorphicPanel = memo(({
         borderWidth: border ? "1px" : "0",
         borderStyle: "solid",
         boxShadow: isHovered
-          ? `${COLORS.primary}20 0 0 2px inset, ${COLORS.primary}30 0 0 4px, ${COLORS.secondary}20 0 0 8px`
+          ? `${COLORS.primary}20 0 0 2px inset, ${COLORS.primary}30 0 0 4px, ${COLORS.neonOrange}20 0 0 8px`
           : `${COLORS.primary}10 0 0 1px inset`,
       }}
     >
@@ -67,8 +67,7 @@ export const GlassmorphicPanel = memo(({
             background: `linear-gradient(
               135deg,
               ${COLORS.primary}30,
-              ${COLORS.secondary}30,
-              ${COLORS.accent}30
+              ${COLORS.neonOrange}30
             )`,
             backgroundClip: "border-box",
             mask: "linear-gradient(#fff 0 0 0 100%) content-box, linear-gradient(#fff 0 0 0 100%)",
